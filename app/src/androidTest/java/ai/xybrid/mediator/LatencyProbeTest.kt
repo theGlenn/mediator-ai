@@ -83,6 +83,7 @@ class LatencyProbeTest {
         id: String, turns: List<Turn>): Map<String, Any?> {
         val row = mutableMapOf<String, Any?>("maxNumTokens" to tokens, "variant" to name, "id" to id,
             "thermalStatus" to power().currentThermalStatus, "thermalHeadroom" to power().getThermalHeadroom(0))
+        runtime.prepareNext() // As during a live turn, background conversation setup finishes first.
         val start = SystemClock.elapsedRealtime()
         try {
             val generated = runtime.generate(turns, decoding)

@@ -33,6 +33,7 @@ class DeviceGateTest {
                     val turn = it.asJsonObject
                     Turn(turn["id"].asInt, Speaker.valueOf(turn["speaker"].asString), turn["text"].asString, typed = true)
                 }
+                runtime.prepareNext() // Live turns give the background conversation setup time to finish.
                 val start = SystemClock.elapsedRealtime()
                 try {
                     val (result, gemma) = runtime.analyze(turns)

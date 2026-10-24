@@ -17,9 +17,13 @@ import com.google.ai.edge.litertlm.ResponseFormat
 import com.google.gson.JsonParser
 import java.io.File
 import java.security.MessageDigest
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -42,6 +46,10 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
         private set
     @Volatile private var generation: com.google.ai.edge.litertlm.Conversation? = null
     private val generationLock = Any()
+    // Conversation setup takes 1.3-2.5 s on the phone and does not depend on the turns, so the next
+    // one is created while people talk. Guarded by mutex; at most one conversation exists at a time.
+    private var spare: com.google.ai.edge.litertlm.Conversation? = null
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     suspend fun initialize(status: (String) -> Unit) = withContext(Dispatchers.IO) {
         mutex.withLock {
@@ -75,6 +83,7 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
                     engine = openEngine(model, Backend.CPU())
                     backendLabel = "Gemma 4 E2B · CPU (GPU unavailable)"
                 }
+                spare = engine!!.createConversation(GemmaAnalysis.configuration(decoding))
                 currentCoroutineContext().ensureActive()
             } catch (failure: Throwable) {
                 release()
@@ -116,7 +125,9 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
             currentCoroutineContext().ensureActive()
             require(turns.isNotEmpty() && turns.size <= 8)
             val setupStart = SystemClock.elapsedRealtime()
-            val active = requireNotNull(engine) { "Load models before starting." }.createConversation(GemmaAnalysis.configuration(decoding))
+            val prepared = spare.takeIf { decoding == this@LocalRuntime.decoding }?.also { spare = null }
+            val active = prepared ?: requireNotNull(engine) { "Load models before starting." }
+                .createConversation(GemmaAnalysis.configuration(decoding))
             synchronized(generationLock) { generation = active }
             try {
                 currentCoroutineContext().ensureActive()
@@ -127,7 +138,16 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
                 Generation(raw, metrics)
             } finally {
                 synchronized(generationLock) { generation = null; active.close() }
+                if (decoding == this@LocalRuntime.decoding) background.launch { prepareNext() }
             }
+        }
+    }
+
+    /** Waits until the next analysis conversation exists; analyses also schedule this themselves. */
+    suspend fun prepareNext() = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            // A failed attempt leaves setup to the next analysis, which reports any error.
+            if (spare == null) spare = engine?.let { runCatching { it.createConversation(GemmaAnalysis.configuration(decoding)) }.getOrNull() }
         }
     }
 
@@ -144,9 +164,14 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
         synchronized(generationLock) { runCatching { generation?.cancelProcess() } }
     }
 
-    suspend fun close() = withContext(Dispatchers.IO) { mutex.withLock { release() } }
+    suspend fun close() = withContext(Dispatchers.IO) {
+        background.cancel()
+        mutex.withLock { release() }
+    }
 
     private fun release() {
+        runCatching { spare?.close() }
+        spare = null
         runCatching { engine?.close() }
         runCatching { speechModel?.close() }
         engine = null

@@ -4,49 +4,43 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 
-/** Short wire keys leave room for actual content within the 256-token generation budget. */
+/**
+ * Every generated token costs a full constrained decode step on the phone, so the wire format carries
+ * only citations the app cannot infer. A speaker with one turn writes plain text and cites that turn
+ * implicitly; a speaker with several writes {"t":text,"e":turn_id}. Shared claims are plain text,
+ * cited by each speaker's request turn (else concern turn, else latest turn).
+ */
 internal object AnalysisCodec {
     fun schemaFor(turns: List<Turn>): String {
-        val shared = sharedSchema(turns)
+        val shared = if (turns.map { it.speaker }.toSet().size == 2) TEXT else EMPTY
         val views = Speaker.entries.joinToString(",") { speaker ->
-            val owned = claimSchema(turns.filter { it.speaker == speaker }.map { it.id })
+            val owned = ownedSchema(turns.filter { it.speaker == speaker }.map { it.id })
             """"${speaker.name}":{"type":"object","additionalProperties":false,"properties":{"request":$owned,"concern":$owned},"required":["request","concern"]}"""
         }
-        return """{"type":"object","additionalProperties":false,"properties":{
+        // llguidance otherwise permits newlines between keys, and each one costs a decode step.
+        return """{"type":"object","additionalProperties":false,"x-guidance":{"whitespace_flexible":false},"properties":{
           $views,"common":$shared,"question":$shared,"proposal":$shared},
           "required":["A","B","common","question","proposal"]}"""
     }
 
-    private fun claimSchema(ids: List<Int>): String {
-        val text = if (ids.isEmpty()) """{"type":"string","const":""}""" else """{"type":"string","maxLength":180}"""
-        val item = if (ids.isEmpty()) """{"type":"integer"}""" else """{"type":"integer","enum":[${ids.joinToString(",")}]}"""
-        // Empty text means absent, even when the schema requires a source placeholder.
-        // This avoids nullable unions and missing citations observed with E2B decoding.
-        val minimum = if (ids.isEmpty()) 0 else 1
-        return """{"type":"object","additionalProperties":false,"properties":{"t":$text,"e":{"type":"array","items":$item,"minItems":$minimum,"maxItems":${ids.size}}},"required":["t","e"]}"""
-    }
-
-    private fun sharedSchema(turns: List<Turn>): String {
-        val both = turns.map { it.speaker }.toSet().size == 2
-        val text = if (both) """{"type":"string","maxLength":180}""" else """{"type":"string","const":""}"""
-        val properties = if (!both) "" else Speaker.entries.joinToString(",") { speaker ->
-            val ids = turns.filter { it.speaker == speaker }.joinToString(",") { it.id.toString() }
-            """"${speaker.name}":{"type":"integer","enum":[$ids]}"""
-        }
-        val required = if (both) """["A","B"]""" else "[]"
-        val evidence = """{"type":"object","additionalProperties":false,"properties":{$properties},"required":$required}"""
-        return """{"type":"object","additionalProperties":false,"properties":{"t":$text,"e":$evidence},"required":["t","e"]}"""
+    private fun ownedSchema(ids: List<Int>) = when (ids.size) {
+        0 -> EMPTY
+        1 -> TEXT
+        else -> """{"type":"object","additionalProperties":false,"properties":{"t":$TEXT,"e":{"type":"integer","enum":[${ids.joinToString(",")}]}},"required":["t","e"]}"""
     }
 
     fun decode(raw: String, turns: List<Turn>): Analysis = try {
         val root = JsonParser.parseString(raw).asJsonObject.exact("A", "B", "common", "question", "proposal")
         val views = Speaker.entries.map { speaker ->
             val view = root[speaker.name].asJsonObject.exact("request", "concern")
-            SpeakerView(speaker, claim(view["request"], turns, speaker), claim(view["concern"], turns, speaker))
+            SpeakerView(speaker, owned(view["request"], turns, speaker), owned(view["concern"], turns, speaker))
         }
-        val ground = claim(root["common"], turns)
-        val question = claim(root["question"], turns)
-        val proposal = claim(root["proposal"], turns)
+        val sources = views.map { view ->
+            (view.request ?: view.concern)?.evidence?.single() ?: turns.lastOrNull { it.speaker == view.speaker }?.id
+        }
+        val ground = shared(root["common"], sources)
+        val question = shared(root["question"], sources)
+        val proposal = shared(root["proposal"], sources)
         require(question != null || proposal == null)
         Analysis(views, ground, question?.let { Intervention(it, proposal) })
     } catch (error: Exception) {
@@ -58,29 +52,32 @@ internal object AnalysisCodec {
         return this
     }
 
-    private fun sourceId(value: JsonElement): Int {
-        require(value.isJsonPrimitive && value.asJsonPrimitive.isNumber && value.asString.matches(Regex("[1-8]")))
-        return value.asInt
+    private fun owned(value: JsonElement, turns: List<Turn>, owner: Speaker): Claim? {
+        val ids = turns.filter { it.speaker == owner }.map { it.id }
+        if (ids.isEmpty()) return null.also { require(label(value) == null) }
+        if (ids.size == 1) return label(value)?.let { text -> Claim(text, ids) }
+        val obj = value.asJsonObject.exact("t", "e")
+        val evidence = obj["e"]
+        require(evidence.isJsonPrimitive && evidence.asJsonPrimitive.isNumber && evidence.asString.matches(Regex("[1-8]")))
+        require(evidence.asInt in ids)
+        return label(obj["t"])?.let { text -> Claim(text, listOf(evidence.asInt)) }
     }
 
-    private fun claim(value: JsonElement, turns: List<Turn>, owner: Speaker? = null): Claim? {
-        val obj = value.asJsonObject.exact("t", "e")
-        require(obj["t"].isJsonPrimitive && obj["t"].asJsonPrimitive.isString)
-        val text = obj["t"].asString.trim()
-        val ids = if (owner != null) obj.getAsJsonArray("e").map { sourceId(it) }
-        else {
-            val evidence = obj["e"].asJsonObject
-            require(evidence.keySet().isEmpty() || evidence.keySet() == setOf("A", "B"))
-            Speaker.entries.mapNotNull { speaker -> evidence[speaker.name]?.let { value ->
-                sourceId(value).also { id -> require(turns.any { it.id == id && it.speaker == speaker }) }
-            } }
-        }
-        require(ids.distinct().size == ids.size)
-        val sources = ids.map { id -> requireNotNull(turns.find { it.id == id }) }
-        if (owner != null) require(sources.all { it.speaker == owner })
-        if (text.lowercase(java.util.Locale.ROOT) in setOf("", "n/a", "none", "unknown", "not stated", "not specified")) return null
-        require(text.length <= 180 && ids.size in 1..8)
-        if (owner == null) require(sources.map { it.speaker }.toSet().size == 2)
-        return Claim(text, ids)
+    /** Shared claims require both participants; their sources come from each speaker's own claims. */
+    private fun shared(value: JsonElement, sources: List<Int?>): Claim? {
+        val text = label(value) ?: return null
+        return Claim(text, sources.map { requireNotNull(it) })
     }
+
+    /** Null for absent or placeholder labels, which are never displayed as interpretations. */
+    private fun label(value: JsonElement): String? {
+        require(value.isJsonPrimitive && value.asJsonPrimitive.isString)
+        val text = value.asString.trim()
+        if (text.lowercase(java.util.Locale.ROOT) in setOf("", "n/a", "none", "no concern", "unknown", "not stated", "not specified")) return null
+        require(text.length <= 180)
+        return text
+    }
+
+    private const val TEXT = """{"type":"string","maxLength":180}"""
+    private const val EMPTY = """{"type":"string","const":""}"""
 }

@@ -31,12 +31,12 @@ internal object GemmaAnalysis {
 
     private const val INSTRUCTION = """You help two people understand each other. Extract the ACTUAL conversation into the requested JSON.
 The input is newest first. A speaker's LATEST explicit request overrides earlier incompatible requests.
-Example: A first wanted morning updates but later says "Actually, four works instead." A's request is "Update at four", citing the later turn.
-Use keys A and B, each with request and concern. Each claim has t (text) and e (evidence turn IDs).
+Example: turn 1 A wants morning updates; turn 3 A says "Actually, four works instead." A's request is {"t":"Update at four","e":3}.
+Use keys A and B, each with request and concern, then common, question and proposal. Each value is brief text.
 Fill each explicit request. Keep labels brief. Preserve negations and attribution.
-A and B cite ONLY their own turns with e:[turn_id]. Common, question and proposal use e:{"A":a_turn_id,"B":b_turn_id}, citing one turn per speaker.
-Leave unknown text empty. Source placeholders for empty text are discarded; they are not interpretations.
-If a speaker has not spoken, all their text/evidence is empty. Common, question and proposal use empty text and e:{} until both speak.
+When a speaker has several turns, each of their claims is {"t":text,"e":turn_id}, citing ONLY their own turn that states it.
+Leave unknown text empty.
+If a speaker has not spoken, their text is empty. Common, question and proposal stay empty until both speak.
 A request is the practical outcome someone needs or wants, including time to estimate or check a schedule.
 A concern explains WHY their request matters (a stated reason, constraint or worry). Do not repeat requests as concerns.
 If a speaker gives only a preference without a reason, their concern text MUST be empty. Never invent motives, diagnoses or emotions.
@@ -51,8 +51,8 @@ Focus on the underlying practical need: in "declare I won; what I actually need 
 Questions should address the people as "you"; you are not a participant. Avoid already answered questions.
 Emit compact JSON, no whitespace, markdown or explanation. Finish within 256 tokens.
 Example: turn 1 A says "Please keep the hallway clear; I need wheelchair access." Turn 2 B says "I need safe bike storage and want us both able to pass."
-Output: {"A":{"request":{"t":"Clear hallway","e":[1]},"concern":{"t":"Wheelchair access","e":[1]}},"B":{"request":{"t":"Safe bike storage","e":[2]},"concern":{"t":"","e":[2]}},"common":{"t":"Accessible hallway","e":{"A":1,"B":2}},"question":{"t":"Could the bike be stored outside the hallway?","e":{"A":1,"B":2}},"proposal":{"t":"Try bike storage outside the hallway","e":{"A":1,"B":2}}}
+Output: {"A":{"request":"Clear hallway","concern":"Wheelchair access"},"B":{"request":"Safe bike storage","concern":""},"common":"Accessible hallway","question":"Could the bike be stored outside the hallway?","proposal":"Try bike storage outside the hallway"}
 Example WITHOUT stated reasons or shared goals: turn 1 A says "I want the window open." Turn 2 B says "I want the window closed."
-Output: {"A":{"request":{"t":"Window open","e":[1]},"concern":{"t":"","e":[1]}},"B":{"request":{"t":"Window closed","e":[2]},"concern":{"t":"","e":[2]}},"common":{"t":"","e":{"A":1,"B":2}},"question":{"t":"What matters to each of you about having the window open or closed?","e":{"A":1,"B":2}},"proposal":{"t":"Compare the reasons behind your preferences","e":{"A":1,"B":2}}}
+Output: {"A":{"request":"Window open","concern":""},"B":{"request":"Window closed","concern":""},"common":"","question":"What matters to each of you about having the window open or closed?","proposal":"Compare the reasons behind your preferences"}
 Extract the actual supplied conversation; never copy example content."""
 }
