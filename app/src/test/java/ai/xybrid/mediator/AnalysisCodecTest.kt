@@ -6,9 +6,9 @@ import org.junit.Test
 
 class AnalysisCodecTest {
     private val turns = listOf(Turn(1, Speaker.A, "I need updates to plan"), Turn(2, Speaker.B, "I need focus"))
-    private val firstRaw = """{"A":[{"k":"request","t":"Updates"},{"k":"concern","t":"Planning"}],"B":[],"common":"","intervene":{"why":"none"}}"""
+    private val firstRaw = """{"A":{"request":"Updates","concern":"Planning"},"B":{},"common":"","intervene":{"why":"none"}}"""
     private val first = Graph().apply(AnalysisCodec.decode(firstRaw, Graph(), turns.take(1)))
-    private val secondRaw = """{"A":[],"B":[{"k":"request","t":"Focus","link":{"rel":"conflicts","to":1}}],"common":"","intervene":{"why":"impasse","question":"Would one daily update work?","proposal":"Try one daily update"}}"""
+    private val secondRaw = """{"A":{},"B":{"request":"Focus","concern":"","link":{"rel":"conflicts","to":1}},"common":"","intervene":{"why":"impasse","question":"Would one daily update work?","proposal":"Try one daily update"}}"""
 
     @Test fun firstTurnAddsClaimsCitingItsOnlyTurnAndCannotIntervene() {
         val update = AnalysisCodec.decode(firstRaw, Graph(), turns.take(1))
@@ -30,13 +30,13 @@ class AnalysisCodecTest {
 
     @Test fun onlySpeakersWithNewTurnsAddClaims() {
         assertThrows(IllegalArgumentException::class.java) {
-            AnalysisCodec.decode(secondRaw.replace("\"A\":[]", """"A":[{"k":"request","t":"Invented"}]"""), first, turns)
+            AnalysisCodec.decode(secondRaw.replace("\"A\":{}", """"A":{"request":"Invented","concern":""}"""), first, turns)
         }
     }
 
     @Test fun severalNewTurnsFromOneSpeakerRequireTheirOwnCitation() {
         val three = turns + Turn(3, Speaker.A, "Actually four works")
-        val raw = """{"A":[{"k":"request","t":"Update at four","e":3}],"B":[{"k":"request","t":"Focus"}],"common":"","intervene":{"why":"none"}}"""
+        val raw = """{"A":{"request":"Update at four","concern":"","e":3},"B":{"request":"Focus","concern":""},"common":"","intervene":{"why":"none"}}"""
         assertEquals(listOf(3), AnalysisCodec.decode(raw, Graph(), three).nodes.first().claim.evidence)
         listOf(raw.replace(",\"e\":3", ""), raw.replace("\"e\":3", "\"e\":2")).forEach { invalid ->
             assertThrows(IllegalArgumentException::class.java) { AnalysisCodec.decode(invalid, Graph(), three) }
@@ -53,7 +53,7 @@ class AnalysisCodecTest {
     @Test fun repeatedClaimsPlaceholdersAndRepeatedCommonGroundAddNothing() {
         val three = turns + Turn(3, Speaker.A, "Still updates")
         val withB = first.apply(AnalysisCodec.decode(secondRaw.replace("\"common\":\"\"", "\"common\":\"Delivery\""), first, turns))
-        val raw = """{"A":[{"k":"request","t":"updates"},{"k":"concern","t":"N/A"}],"B":[],"common":"Delivery","intervene":{"why":"none"}}"""
+        val raw = """{"A":{"request":"updates","concern":"N/A"},"B":{},"common":"Delivery","intervene":{"why":"none"}}"""
         assertTrue(AnalysisCodec.decode(raw, withB, three).nodes.isEmpty())
     }
 
@@ -64,11 +64,11 @@ class AnalysisCodecTest {
 
     @Test fun schemaOffersOnlyWhatTheNewTurnsAllow() {
         val opening = JsonParser.parseString(AnalysisCodec.schemaFor(Graph(), turns.take(1))).asJsonObject["properties"].asJsonObject
-        assertEquals(0, opening["B"].asJsonObject["maxItems"].asInt)
+        assertEquals(0, opening["B"].asJsonObject["properties"].asJsonObject.size())
         assertEquals("", opening["common"].asJsonObject["const"].asString)
         assertEquals("none", opening["intervene"].asJsonObject["properties"].asJsonObject["why"].asJsonObject["const"].asString)
         val later = JsonParser.parseString(AnalysisCodec.schemaFor(first, turns)).asJsonObject["properties"].asJsonObject
-        val item = later["B"].asJsonObject["items"].asJsonObject["properties"].asJsonObject
+        val item = later["B"].asJsonObject["properties"].asJsonObject
         assertEquals("[1,2]", item["link"].asJsonObject["properties"].asJsonObject["to"].asJsonObject["enum"].toString())
         assertFalse(item.has("e"))
         assertEquals(2, later["intervene"].asJsonObject["anyOf"].asJsonArray.size())
