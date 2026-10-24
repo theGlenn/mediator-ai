@@ -8,7 +8,7 @@ class AnalysisCodecTest {
     private val turns = listOf(Turn(1, Speaker.A, "I need updates"), Turn(2, Speaker.B, "I need focus"))
     private val valid = """{"A":{"request":"Updates","concern":""},"B":{"request":"Focus","concern":""},"common":"","question":"Would one daily update work?","proposal":""}"""
     private val corrected = turns + Turn(3, Speaker.A, "Actually four works")
-    private val multiTurn = """{"A":{"request":{"t":"Update at four","e":3},"concern":{"t":"","e":1}},"B":{"request":"Focus","concern":""},"common":"","question":"Would four work?","proposal":"Try four"}"""
+    private val multiTurn = """{"A":{"request":{"t":"Update at four","e":3},"concern":{"t":"","e":1}},"B":{"request":{"t":"Focus","e":2},"concern":{"t":"","e":2}},"common":"","question":"Would four work?","proposal":"Try four"}"""
 
     @Test fun parsesCompactSingleTurnOutputAndInfersEvidence() {
         val result = AnalysisCodec.decode(valid, turns)
@@ -26,7 +26,7 @@ class AnalysisCodecTest {
     }
 
     @Test fun sharedEvidenceFallsBackToConcernThenLatestTurn() {
-        val raw = """{"A":{"request":{"t":"","e":1},"concern":{"t":"Planning","e":1}},"B":{"request":"","concern":""},"common":"","question":"What would help?","proposal":""}"""
+        val raw = """{"A":{"request":{"t":"","e":1},"concern":{"t":"Planning","e":1}},"B":{"request":{"t":"","e":2},"concern":{"t":"","e":2}},"common":"","question":"What would help?","proposal":""}"""
         assertEquals(listOf(1, 2), AnalysisCodec.decode(raw, corrected).intervention!!.question.evidence)
     }
 
@@ -45,12 +45,19 @@ class AnalysisCodecTest {
         }
     }
 
-    @Test fun rejectsAFormThatDoesNotMatchTheSpeakersTurnCount() {
+    @Test fun everyClaimUsesOneFormPerOutput() {
         assertThrows(IllegalArgumentException::class.java) {
             AnalysisCodec.decode(valid.replace("\"Updates\"", """{"t":"Updates","e":1}"""), turns)
         }
+        // Once A has two turns, single-turn B must cite too.
         assertThrows(IllegalArgumentException::class.java) {
-            AnalysisCodec.decode(multiTurn.replace("""{"t":"Update at four","e":3}""", "\"Update at four\""), corrected)
+            AnalysisCodec.decode(multiTurn.replace("""{"t":"Focus","e":2}""", "\"Focus\""), corrected)
+        }
+    }
+
+    @Test fun rejectsWireSyntaxLeakingIntoALabel() {
+        assertThrows(IllegalArgumentException::class.java) {
+            AnalysisCodec.decode(valid.replace("\"Focus\"", "\"t\\\":\\\"Focus\\\",\\\"e\\\":2}\""), turns)
         }
     }
 
@@ -83,7 +90,9 @@ class AnalysisCodecTest {
         val schema = JsonParser.parseString(AnalysisCodec.schemaFor(corrected)).asJsonObject["properties"].asJsonObject
         val a = schema["A"].asJsonObject["properties"].asJsonObject["request"].asJsonObject
         assertEquals("[1,3]", a["properties"].asJsonObject["e"].asJsonObject["enum"].toString())
-        assertEquals("string", schema["B"].asJsonObject["properties"].asJsonObject["request"].asJsonObject["type"].asString)
+        val b = schema["B"].asJsonObject["properties"].asJsonObject["request"].asJsonObject
+        assertEquals("[2]", b["properties"].asJsonObject["e"].asJsonObject["enum"].toString())
+        assertEquals("^[^\"{}\\\\]{0,180}$", schema["question"].asJsonObject["pattern"].asString)
         val first = JsonParser.parseString(AnalysisCodec.schemaFor(turns.take(1))).asJsonObject["properties"].asJsonObject
         assertEquals("", first["question"].asJsonObject["const"].asString)
         assertEquals("", first["B"].asJsonObject["properties"].asJsonObject["concern"].asJsonObject["const"].asString)

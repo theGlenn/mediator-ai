@@ -6,15 +6,17 @@ import com.google.gson.JsonParser
 
 /**
  * Every generated token costs a full constrained decode step on the phone, so the wire format carries
- * only citations the app cannot infer. A speaker with one turn writes plain text and cites that turn
- * implicitly; a speaker with several writes {"t":text,"e":turn_id}. Shared claims are plain text,
- * cited by each speaker's request turn (else concern turn, else latest turn).
+ * only citations the app cannot infer. While each speaker has at most one turn, claims are plain text
+ * citing that turn implicitly. Once anyone has several turns, every A/B claim is {"t":text,"e":turn_id};
+ * one form per output keeps E2B from writing JSON inside a string. Shared claims are plain text, cited by
+ * each speaker's request turn (else concern turn, else latest turn).
  */
 internal object AnalysisCodec {
     fun schemaFor(turns: List<Turn>): String {
         val shared = if (turns.map { it.speaker }.toSet().size == 2) TEXT else EMPTY
+        val cited = cited(turns)
         val views = Speaker.entries.joinToString(",") { speaker ->
-            val owned = ownedSchema(turns.filter { it.speaker == speaker }.map { it.id })
+            val owned = ownedSchema(turns.filter { it.speaker == speaker }.map { it.id }, cited)
             """"${speaker.name}":{"type":"object","additionalProperties":false,"properties":{"request":$owned,"concern":$owned},"required":["request","concern"]}"""
         }
         // llguidance otherwise permits newlines between keys, and each one costs a decode step.
@@ -23,9 +25,11 @@ internal object AnalysisCodec {
           "required":["A","B","common","question","proposal"]}"""
     }
 
-    private fun ownedSchema(ids: List<Int>) = when (ids.size) {
-        0 -> EMPTY
-        1 -> TEXT
+    private fun cited(turns: List<Turn>) = turns.groupingBy { it.speaker }.eachCount().values.any { it > 1 }
+
+    private fun ownedSchema(ids: List<Int>, cited: Boolean) = when {
+        ids.isEmpty() -> EMPTY
+        !cited -> TEXT
         else -> """{"type":"object","additionalProperties":false,"properties":{"t":$TEXT,"e":{"type":"integer","enum":[${ids.joinToString(",")}]}},"required":["t","e"]}"""
     }
 
@@ -55,7 +59,7 @@ internal object AnalysisCodec {
     private fun owned(value: JsonElement, turns: List<Turn>, owner: Speaker): Claim? {
         val ids = turns.filter { it.speaker == owner }.map { it.id }
         if (ids.isEmpty()) return null.also { require(label(value) == null) }
-        if (ids.size == 1) return label(value)?.let { text -> Claim(text, ids) }
+        if (!cited(turns)) return label(value)?.let { text -> Claim(text, ids) }
         val obj = value.asJsonObject.exact("t", "e")
         val evidence = obj["e"]
         require(evidence.isJsonPrimitive && evidence.asJsonPrimitive.isNumber && evidence.asString.matches(Regex("[1-8]")))
@@ -74,10 +78,11 @@ internal object AnalysisCodec {
         require(value.isJsonPrimitive && value.asJsonPrimitive.isString)
         val text = value.asString.trim()
         if (text.lowercase(java.util.Locale.ROOT) in setOf("", "n/a", "none", "no concern", "unknown", "not stated", "not specified")) return null
-        require(text.length <= 180)
+        require(text.length <= 180 && text.none { it in "\"{}\\" })
         return text
     }
 
-    private const val TEXT = """{"type":"string","maxLength":180}"""
+    // Labels exclude quotes, braces and backslashes so wire syntax cannot leak into displayed text.
+    private const val TEXT = """{"type":"string","pattern":"^[^\"{}\\\\]{0,180}${'$'}"}"""
     private const val EMPTY = """{"type":"string","const":""}"""
 }

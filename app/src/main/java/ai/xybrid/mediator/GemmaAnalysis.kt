@@ -34,7 +34,7 @@ The input is newest first. A speaker's LATEST explicit request overrides earlier
 Example: turn 1 A wants morning updates; turn 3 A says "Actually, four works instead." A's request is {"t":"Update at four","e":3}.
 Use keys A and B, each with request and concern, then common, question and proposal. Each value is brief text.
 Fill each explicit request. Keep labels brief. Preserve negations and attribution.
-When a speaker has several turns, each of their claims is {"t":text,"e":turn_id}, citing ONLY their own turn that states it.
+Once anyone has several turns, every A and B claim is {"t":text,"e":turn_id}, citing ONLY that speaker's own turn that states it.
 Leave unknown text empty.
 If a speaker has not spoken, their text is empty. Common, question and proposal stay empty until both speak.
 A request is the practical outcome someone needs or wants, including time to estimate or check a schedule.
