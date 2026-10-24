@@ -35,8 +35,10 @@ class DeviceGateTest {
                 }
                 runtime.prepareNext() // Live turns give the background conversation setup time to finish.
                 val start = SystemClock.elapsedRealtime()
+                var decoded: Analysis? = null
                 try {
                     val (result, gemma) = runtime.analyze(turns)
+                    decoded = result
                     check(result.views.all { it.request != null }) { "Explicit requests were left empty in a test dialogue." }
                     check(result.intervention != null) { "An unresolved test dialogue did not produce a question." }
                     if (example["id"].asString == "correction") {
@@ -50,7 +52,9 @@ class DeviceGateTest {
                         "analysis" to result, "review" to example["review"].asString,
                         "humanUseful" to null)
                 } catch (error: Exception) {
-                    reports += mapOf("id" to example["id"].asString, "error" to error.javaClass.simpleName)
+                    // Messages are fixed gate/codec strings; the synthetic fixture text is already public.
+                    reports += mapOf("id" to example["id"].asString, "error" to error.javaClass.simpleName,
+                        "message" to error.message, "cause" to error.cause?.toString(), "analysis" to decoded)
                 }
             }
             // Synthetic fixtures only. Live session content is never written to this report.
