@@ -125,7 +125,9 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
             currentCoroutineContext().ensureActive()
             require(turns.isNotEmpty() && turns.size <= 8)
             val setupStart = SystemClock.elapsedRealtime()
-            val prepared = spare.takeIf { decoding == this@LocalRuntime.decoding }?.also { spare = null }
+            val prepared = spare?.takeIf { decoding == this@LocalRuntime.decoding }
+            if (prepared == null) runCatching { spare?.close() }
+            spare = null
             val active = prepared ?: requireNotNull(engine) { "Load models before starting." }
                 .createConversation(GemmaAnalysis.configuration(decoding))
             synchronized(generationLock) { generation = active }
