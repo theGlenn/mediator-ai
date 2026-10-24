@@ -5,96 +5,72 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AnalysisCodecTest {
-    private val turns = listOf(Turn(1, Speaker.A, "I need updates"), Turn(2, Speaker.B, "I need focus"))
-    private val valid = """{"A":{"request":"Updates","concern":""},"B":{"request":"Focus","concern":""},"common":"","question":"Would one daily update work?","proposal":""}"""
-    private val corrected = turns + Turn(3, Speaker.A, "Actually four works")
-    private val multiTurn = """{"A":{"request":{"t":"Update at four","e":3},"concern":{"t":"","e":1}},"B":{"request":{"t":"Focus","e":2},"concern":{"t":"","e":2}},"common":"","question":"Would four work?","proposal":"Try four"}"""
+    private val turns = listOf(Turn(1, Speaker.A, "I need updates to plan"), Turn(2, Speaker.B, "I need focus"))
+    private val firstRaw = """{"A":[{"k":"request","t":"Updates"},{"k":"concern","t":"Planning"}],"B":[],"common":"","intervene":{"why":"none"}}"""
+    private val first = Graph().apply(AnalysisCodec.decode(firstRaw, Graph(), turns.take(1)))
+    private val secondRaw = """{"A":[],"B":[{"k":"request","t":"Focus","link":{"rel":"conflicts","to":1}}],"common":"","intervene":{"why":"impasse","question":"Would one daily update work?","proposal":"Try one daily update"}}"""
 
-    @Test fun parsesCompactSingleTurnOutputAndInfersEvidence() {
-        val result = AnalysisCodec.decode(valid, turns)
-        assertEquals(Claim("Updates", listOf(1)), result.views.first().request)
-        assertNull(result.views.first().concern)
-        assertNull(result.commonGround)
-        assertEquals(listOf(1, 2), result.intervention!!.question.evidence)
-    }
-
-    @Test fun multiTurnSpeakerCitesOneOwnTurnAndSharedClaimsFollowIt() {
-        val result = AnalysisCodec.decode(multiTurn, corrected)
-        assertEquals(Claim("Update at four", listOf(3)), result.views.first().request)
-        assertEquals(listOf(3, 2), result.intervention!!.question.evidence)
-        assertEquals(listOf(3, 2), result.intervention!!.proposal!!.evidence)
-    }
-
-    @Test fun sharedEvidenceFallsBackToConcernThenLatestTurn() {
-        val raw = """{"A":{"request":{"t":"","e":1},"concern":{"t":"Planning","e":1}},"B":{"request":{"t":"","e":2},"concern":{"t":"","e":2}},"common":"","question":"What would help?","proposal":""}"""
-        assertEquals(listOf(1, 2), AnalysisCodec.decode(raw, corrected).intervention!!.question.evidence)
-    }
-
-    @Test fun unknownPlaceholderLabelsAreAbsentInsteadOfDisplayedAsConcerns() {
-        listOf("N/A", "unknown", "not stated", "No concern").forEach { label ->
-            val result = AnalysisCodec.decode(valid.replace("\"Updates\"", "\"$label\""), turns)
-            assertNull(result.views.first().request)
-        }
-    }
-
-    @Test fun rejectsInventedOrOtherSpeakerEvidence() {
-        listOf("\"e\":99", "\"e\":2").forEach { evidence ->
-            assertThrows(IllegalArgumentException::class.java) {
-                AnalysisCodec.decode(multiTurn.replace("\"e\":3", evidence), corrected)
-            }
-        }
-    }
-
-    @Test fun everyClaimUsesOneFormPerOutput() {
+    @Test fun firstTurnAddsClaimsCitingItsOnlyTurnAndCannotIntervene() {
+        val update = AnalysisCodec.decode(firstRaw, Graph(), turns.take(1))
+        assertEquals(listOf(Claim("Updates", listOf(1)), Claim("Planning", listOf(1))), update.nodes.map { it.claim })
+        assertEquals(setOf(1), update.turns)
+        assertNull(update.intervention)
         assertThrows(IllegalArgumentException::class.java) {
-            AnalysisCodec.decode(valid.replace("\"Updates\"", """{"t":"Updates","e":1}"""), turns)
+            AnalysisCodec.decode(firstRaw.replace("""{"why":"none"}""", """{"why":"impasse","question":"Why?","proposal":""}"""), Graph(), turns.take(1))
         }
-        // Once A has two turns, single-turn B must cite too.
+    }
+
+    @Test fun laterTurnLinksToTheMapAndInterventionCitesBothSpeakers() {
+        val update = AnalysisCodec.decode(secondRaw, first, turns)
+        assertEquals(NewNode(NodeKind.REQUEST, Speaker.B, Claim("Focus", listOf(2)), LinkKind.CONFLICTS to 1), update.nodes.single())
+        assertEquals(listOf(1, 2), update.intervention!!.question.evidence)
+        assertEquals("impasse", update.reason)
+        assertEquals(setOf(2), update.turns)
+    }
+
+    @Test fun onlySpeakersWithNewTurnsAddClaims() {
         assertThrows(IllegalArgumentException::class.java) {
-            AnalysisCodec.decode(multiTurn.replace("""{"t":"Focus","e":2}""", "\"Focus\""), corrected)
+            AnalysisCodec.decode(secondRaw.replace("\"A\":[]", """"A":[{"k":"request","t":"Invented"}]"""), first, turns)
         }
     }
 
-    @Test fun rejectsWireSyntaxLeakingIntoALabel() {
-        assertThrows(IllegalArgumentException::class.java) {
-            AnalysisCodec.decode(valid.replace("\"Focus\"", "\"t\\\":\\\"Focus\\\",\\\"e\\\":2}\""), turns)
+    @Test fun severalNewTurnsFromOneSpeakerRequireTheirOwnCitation() {
+        val three = turns + Turn(3, Speaker.A, "Actually four works")
+        val raw = """{"A":[{"k":"request","t":"Update at four","e":3}],"B":[{"k":"request","t":"Focus"}],"common":"","intervene":{"why":"none"}}"""
+        assertEquals(listOf(3), AnalysisCodec.decode(raw, Graph(), three).nodes.first().claim.evidence)
+        listOf(raw.replace(",\"e\":3", ""), raw.replace("\"e\":3", "\"e\":2")).forEach { invalid ->
+            assertThrows(IllegalArgumentException::class.java) { AnalysisCodec.decode(invalid, Graph(), three) }
         }
     }
 
-    @Test fun rejectsMalformedTruncatedAndUnknownSpeakerOutput() {
-        listOf("{", "{}", valid.dropLast(10), valid.replace("\"B\":", "\"C\":"))
-            .forEach { raw -> assertThrows(IllegalArgumentException::class.java) { AnalysisCodec.decode(raw, turns) } }
-    }
-
-    @Test fun rejectsUnsupportedExtraFieldsAndMissingSpeaker() {
-        assertThrows(IllegalArgumentException::class.java) {
-            AnalysisCodec.decode(valid.replaceFirst("{", "{\"agreement\":true,"), turns)
-        }
-        assertThrows(IllegalArgumentException::class.java) {
-            AnalysisCodec.decode(valid.replace("\"B\":", "\"A\":"), turns)
+    @Test fun implausibleLinksAreDroppedButTheClaimStays() {
+        listOf("""{"rel":"replaces","to":1}""", """{"rel":"conflicts","to":9}""").forEach { link ->
+            val raw = secondRaw.replace("""{"rel":"conflicts","to":1}""", link)
+            assertNull(AnalysisCodec.decode(raw, first, turns).nodes.single().link)
         }
     }
 
-    @Test fun firstSpeakerCannotInventSecondSpeakerOrIntervention() {
-        val raw = """{"A":{"request":"Updates","concern":""},"B":{"request":"","concern":""},"common":"","question":"","proposal":""}"""
-        val analysis = AnalysisCodec.decode(raw, turns.take(1))
-        assertNull(analysis.views.last().request)
-        assertNull(analysis.intervention)
-        listOf(raw.replace("\"B\":{\"request\":\"\"", "\"B\":{\"request\":\"Focus\""),
-            raw.replace("\"question\":\"\"", "\"question\":\"Why?\"")).forEach { invented ->
-            assertThrows(IllegalArgumentException::class.java) { AnalysisCodec.decode(invented, turns.take(1)) }
-        }
+    @Test fun repeatedClaimsPlaceholdersAndRepeatedCommonGroundAddNothing() {
+        val three = turns + Turn(3, Speaker.A, "Still updates")
+        val withB = first.apply(AnalysisCodec.decode(secondRaw.replace("\"common\":\"\"", "\"common\":\"Delivery\""), first, turns))
+        val raw = """{"A":[{"k":"request","t":"updates"},{"k":"concern","t":"N/A"}],"B":[],"common":"Delivery","intervene":{"why":"none"}}"""
+        assertTrue(AnalysisCodec.decode(raw, withB, three).nodes.isEmpty())
     }
 
-    @Test fun schemaOffersObjectsAndOwnTurnIdsOnlyToSpeakersWithSeveralTurns() {
-        val schema = JsonParser.parseString(AnalysisCodec.schemaFor(corrected)).asJsonObject["properties"].asJsonObject
-        val a = schema["A"].asJsonObject["properties"].asJsonObject["request"].asJsonObject
-        assertEquals("[1,3]", a["properties"].asJsonObject["e"].asJsonObject["enum"].toString())
-        val b = schema["B"].asJsonObject["properties"].asJsonObject["request"].asJsonObject
-        assertEquals("[2]", b["properties"].asJsonObject["e"].asJsonObject["enum"].toString())
-        assertEquals("^[^\"{}\\\\]{0,180}$", schema["question"].asJsonObject["pattern"].asString)
-        val first = JsonParser.parseString(AnalysisCodec.schemaFor(turns.take(1))).asJsonObject["properties"].asJsonObject
-        assertEquals("", first["question"].asJsonObject["const"].asString)
-        assertEquals("", first["B"].asJsonObject["properties"].asJsonObject["concern"].asJsonObject["const"].asString)
+    @Test fun rejectsMalformedTruncatedAndLeakedWireSyntax() {
+        listOf("{", "{}", secondRaw.dropLast(10), secondRaw.replace("\"Focus\"", "\"t\\\":\\\"Focus\\\"}\""))
+            .forEach { raw -> assertThrows(IllegalArgumentException::class.java) { AnalysisCodec.decode(raw, first, turns) } }
+    }
+
+    @Test fun schemaOffersOnlyWhatTheNewTurnsAllow() {
+        val opening = JsonParser.parseString(AnalysisCodec.schemaFor(Graph(), turns.take(1))).asJsonObject["properties"].asJsonObject
+        assertEquals(0, opening["B"].asJsonObject["maxItems"].asInt)
+        assertEquals("", opening["common"].asJsonObject["const"].asString)
+        assertEquals("none", opening["intervene"].asJsonObject["properties"].asJsonObject["why"].asJsonObject["const"].asString)
+        val later = JsonParser.parseString(AnalysisCodec.schemaFor(first, turns)).asJsonObject["properties"].asJsonObject
+        val item = later["B"].asJsonObject["items"].asJsonObject["properties"].asJsonObject
+        assertEquals("[1,2]", item["link"].asJsonObject["properties"].asJsonObject["to"].asJsonObject["enum"].toString())
+        assertFalse(item.has("e"))
+        assertEquals(2, later["intervene"].asJsonObject["anyOf"].asJsonArray.size())
     }
 }

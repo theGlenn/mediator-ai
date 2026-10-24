@@ -139,10 +139,11 @@ internal class MediatorViewModel(application: Application) : AndroidViewModel(ap
 
     private suspend fun analyze(source: AnalysisSource, audio: AudioTiming? = null) {
         val snapshot = mutable.value.conversation
+        if (AnalysisCodec.pending(snapshot.base(), snapshot.turns).isEmpty()) return
         mutable.update { it.copy(busy = true, status = "Finding the requests and common ground…", error = null, retrySpeaker = null) }
         val startedAt = SystemClock.elapsedRealtime()
         try {
-            val (result, gemma) = runtime.analyze(snapshot.turns)
+            val (update, gemma) = runtime.analyze(snapshot.base(), snapshot.turns)
             currentCoroutineContext().ensureActive()
             val now = SystemClock.elapsedRealtime()
             val current = mutable.value.conversation
@@ -150,10 +151,10 @@ internal class MediatorViewModel(application: Application) : AndroidViewModel(ap
             val timing = AnalysisTiming.complete(source, snapshot.turns.size, startedAt, now, audio, gemma)
             mutable.update {
                 if (it.conversation.revision != snapshot.revision) it else it.copy(
-                    conversation = it.conversation.apply(snapshot.revision, result, now),
+                    conversation = it.conversation.apply(snapshot.revision, update, now),
                     analysisMillis = timing.analysisMillis, endToCardMillis = timing.endToMapMillis,
                     diagnostics = timing.appendTo(it.diagnostics),
-                    status = if (result.intervention != null && snapshot.turns.map { t -> t.speaker }.distinct().size == 2)
+                    status = if (update.intervention != null && snapshot.turns.map { t -> t.speaker }.distinct().size == 2)
                         "A question is ready when you are." else "Map updated. Choose the next speaker.")
             }
             Log.i("MediatorPerf", timing.logMetadata())
@@ -214,7 +215,7 @@ internal class MediatorViewModel(application: Application) : AndroidViewModel(ap
     }
 
     private fun canTakeTurn() = mutable.value.let {
-        it.ready && !it.busy && it.conversation.active && it.conversation.recording == null && it.conversation.turns.size < 8
+        it.ready && !it.busy && it.conversation.active && it.conversation.recording == null && it.conversation.turns.size < MAX_TURNS
     }
 
     private fun stopChime() {

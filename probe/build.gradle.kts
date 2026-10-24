@@ -7,7 +7,7 @@ kotlin {
     sourceSets.main {
         kotlin.srcDir("../app/src/main/java")
         kotlin.include("ai/xybrid/mediator/Conversation.kt", "ai/xybrid/mediator/AnalysisCodec.kt",
-            "ai/xybrid/mediator/GemmaAnalysis.kt", "ai/xybrid/mediator/ModelProbe.kt")
+            "ai/xybrid/mediator/GemmaAnalysis.kt", "ai/xybrid/mediator/ConversationGraph.kt", "ai/xybrid/mediator/ModelProbe.kt")
     }
 }
 dependencies {

@@ -5,10 +5,14 @@ internal data class Turn(val id: Int, val speaker: Speaker, val text: String, va
 internal data class Claim(val text: String, val evidence: List<Int>)
 internal data class SpeakerView(val speaker: Speaker, val request: Claim?, val concern: Claim?)
 internal data class Intervention(val question: Claim, val proposal: Claim?)
+/** The map summary the UI shows: each speaker's latest request and concern, and the current common ground. */
 internal data class Analysis(val views: List<SpeakerView>, val commonGround: Claim?, val intervention: Intervention?)
 internal data class Agreement(val proposal: Claim, val acceptedBy: Set<Speaker> = emptySet()) {
     val complete get() = acceptedBy.containsAll(Speaker.entries)
 }
+
+/** The map no longer carries the transcript into each prompt, so this bounds a session rather than the model. */
+internal const val MAX_TURNS = 40
 
 /** Pure session transitions. Native callbacks never mutate these values directly. */
 internal data class Conversation(
@@ -19,6 +23,9 @@ internal data class Conversation(
     val recording: Speaker? = null,
     val analysis: Analysis? = null,
     val analysisTurns: List<Turn> = emptyList(),
+    val graph: Graph = Graph(),
+    /** Corrected turns whose old nodes the next analysis discards and maps again. */
+    val remap: Set<Int> = emptySet(),
     val pending: Intervention? = null,
     val suggestionOpen: Boolean = false,
     val agreement: Agreement? = null,
@@ -31,7 +38,7 @@ internal data class Conversation(
     )
 
     fun beginTurn(speaker: Speaker): Conversation {
-        require(active && turns.size < 8 && recording == null)
+        require(active && turns.size < MAX_TURNS && recording == null)
         return copy(revision = revision + 1, recording = speaker, pending = null,
             suggestionOpen = false, pendingChimed = false, agreement = agreement?.takeIf { it.complete })
     }
@@ -40,7 +47,7 @@ internal data class Conversation(
 
     fun commit(speaker: Speaker, text: String, typed: Boolean = false): Conversation {
         if (text.isBlank()) return this
-        require(active && turns.size < 8 && text.length <= 1000) { "Use up to eight turns of at most 1,000 characters." }
+        require(active && turns.size < MAX_TURNS && text.length <= 1000) { "Use up to $MAX_TURNS turns of at most 1,000 characters." }
         return copy(revision = revision + 1, recording = null,
             turns = turns + Turn((turns.lastOrNull()?.id ?: 0) + 1, speaker, text.trim(), typed),
             pending = null, suggestionOpen = false, agreement = agreement?.takeIf { it.complete }, pendingChimed = false)
@@ -49,14 +56,19 @@ internal data class Conversation(
     fun edit(id: Int, text: String): Conversation {
         require(active && turns.any { it.id == id } && text.isNotBlank() && text.length <= 1000)
         return copy(revision = revision + 1,
-            turns = turns.map { if (it.id == id) it.copy(text = text.trim()) else it },
+            turns = turns.map { if (it.id == id) it.copy(text = text.trim()) else it }, remap = remap + id,
             pending = null, suggestionOpen = false, agreement = null, pendingChimed = false)
     }
 
-    fun apply(requestRevision: Long, result: Analysis, now: Long): Conversation {
+    /** The graph the next analysis extends: the shown map minus anything built from corrected turns. */
+    fun base() = remap.fold(graph) { graph, turn -> graph.forget(turn) }
+
+    fun apply(requestRevision: Long, update: GraphUpdate, now: Long): Conversation {
         if (!active || revision != requestRevision || recording != null) return this
-        val intervention = result.intervention.takeIf { turns.map { it.speaker }.toSet().size == 2 }
-        return copy(analysis = result, analysisTurns = turns, pending = intervention, suggestionOpen = false,
+        val graph = base().apply(update)
+        val intervention = update.intervention.takeIf { turns.map { it.speaker }.toSet().size == 2 }
+        return copy(analysis = graph.projection(intervention), analysisTurns = turns, graph = graph, remap = remap - update.turns,
+            pending = intervention, suggestionOpen = false,
             agreement = if (intervention?.proposal == null) agreement?.takeIf { it.complete }
                 else agreement?.takeIf { it.proposal == intervention.proposal }, pendingChimed = false)
     }

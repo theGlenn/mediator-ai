@@ -159,15 +159,15 @@ private fun SpeakingControls(state: ScreenState, onRecord: (Speaker) -> Unit, on
             Text("Who would like to speak?", style = MaterialTheme.typography.titleLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Speaker.entries.forEach { speaker ->
-                    Button(onClick = { onRecord(speaker) }, enabled = !state.busy && session.turns.size < 8,
+                    Button(onClick = { onRecord(speaker) }, enabled = !state.busy && session.turns.size < MAX_TURNS,
                         modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(
                             containerColor = if (speaker == Speaker.A) AColor else BColor, contentColor = Ink)) {
                         Text("${session.names[speaker]} · 30s")
                     }
                 }
             }
-            TextButton(onClick = onTyped, enabled = !state.busy && session.turns.size < 8) { Text("Type a turn instead · manual entry") }
-            if (session.turns.size >= 8) Text("Eight-turn demo complete. You can correct turns, review a suggestion, or end the session.", style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = onTyped, enabled = !state.busy && session.turns.size < MAX_TURNS) { Text("Type a turn instead · manual entry") }
+            if (session.turns.size >= MAX_TURNS) Text("Turn limit reached. You can correct turns, review a suggestion, or end the session.", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -196,17 +196,18 @@ private fun ConversationMap(session: Conversation, onEvidence: (Claim) -> Unit) 
             Text("Previous map · waiting for updated analysis. Source links show the transcript used for this map.",
                 style = MaterialTheme.typography.bodySmall)
         }
+        val graph = session.graph
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Speaker.entries.forEach { speaker ->
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val view = session.analysis?.views?.find { it.speaker == speaker }
+                    val color = if (speaker == Speaker.A) AColor else BColor
+                    val owned = graph.active.filter { it.owner == speaker }
                     Text(session.names.getValue(speaker), fontWeight = FontWeight.SemiBold)
-                    ClaimNode("REQUEST", view?.request, if (speaker == Speaker.A) AColor else BColor, "Listening for their request", onEvidence)
-                    Canvas(Modifier.fillMaxWidth().height(10.dp)) {
-                        drawLine(Green.copy(alpha = 0.3f), Offset(size.width / 2, 0f),
-                            Offset(size.width / 2, size.height), 2.dp.toPx())
+                    if (owned.isEmpty()) ClaimNode("REQUEST", null, color, "Listening for their request", onEvidence)
+                    owned.forEach { node ->
+                        ClaimNode(if (node.kind == NodeKind.REQUEST) "REQUEST" else "CONCERN · TENTATIVE", node.claim, color, "",
+                            onEvidence, graph.describe(node, session.names))
                     }
-                    ClaimNode("CONCERN · TENTATIVE", view?.concern, if (speaker == Speaker.A) AColor else BColor, "Not stated yet", onEvidence)
                 }
             }
         }
@@ -215,8 +216,9 @@ private fun ConversationMap(session: Conversation, onEvidence: (Claim) -> Unit) 
             drawLine(color, Offset(size.width * 0.25f, 0f), Offset(size.width / 2, size.height), 2.dp.toPx())
             drawLine(color, Offset(size.width * 0.75f, 0f), Offset(size.width / 2, size.height), 2.dp.toPx())
         }
-        ClaimNode("POSSIBLE COMMON GROUND · TENTATIVE", session.analysis?.commonGround,
-            Color(0xFFE6EEE5), "A shared goal may emerge as you both speak.", onEvidence)
+        val common = graph.latest(null, NodeKind.COMMON)
+        ClaimNode("POSSIBLE COMMON GROUND · TENTATIVE", common?.claim, Color(0xFFE6EEE5),
+            "A shared goal may emerge as you both speak.", onEvidence, common?.let { graph.describe(it, session.names) }.orEmpty())
         session.agreement?.takeIf { it.complete }?.let {
             ClaimNode("AGREED BY BOTH", it.proposal, Color(0xFFD3E8D5), "", onEvidence)
         }
@@ -224,12 +226,14 @@ private fun ConversationMap(session: Conversation, onEvidence: (Claim) -> Unit) 
 }
 
 @Composable
-private fun ClaimNode(label: String, claim: Claim?, color: Color, empty: String, onEvidence: (Claim) -> Unit) {
+private fun ClaimNode(label: String, claim: Claim?, color: Color, empty: String, onEvidence: (Claim) -> Unit,
+    relations: List<String> = emptyList()) {
     Surface(color = color, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()
         .clickable(enabled = claim != null) { claim?.let(onEvidence) }) {
         Column(Modifier.padding(14.dp).heightIn(min = 60.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(label, fontSize = 10.sp, lineHeight = 13.sp, fontWeight = FontWeight.SemiBold, color = Green)
             Text(claim?.text ?: empty, style = MaterialTheme.typography.bodyMedium)
+            relations.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = Ink.copy(alpha = 0.7f)) }
             if (claim != null) Text("View source ↗", style = MaterialTheme.typography.labelSmall, color = Green)
         }
     }

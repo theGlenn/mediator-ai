@@ -8,13 +8,13 @@ class ConversationTest {
         .commit(Speaker.A, "I need an update so I can plan delivery.")
         .commit(Speaker.B, "I need quiet time to finish the work.")
 
-    private fun analysis() = Analysis(
-        listOf(SpeakerView(Speaker.A, Claim("Updates", listOf(1)), null),
-            SpeakerView(Speaker.B, Claim("Quiet time", listOf(2)), null)),
-        Claim("Finish the work", listOf(1, 2)),
-        Intervention(Claim("Would a daily update help?", listOf(1, 2)),
-            Claim("Try a daily update", listOf(1, 2)))
-    )
+    private val suggestion = Intervention(Claim("Would a daily update help?", listOf(1, 2)), Claim("Try a daily update", listOf(1, 2)))
+
+    private fun analysis(intervention: Intervention? = suggestion) = GraphUpdate(
+        listOf(NewNode(NodeKind.REQUEST, Speaker.A, Claim("Updates", listOf(1))),
+            NewNode(NodeKind.REQUEST, Speaker.B, Claim("Quiet time", listOf(2))),
+            NewNode(NodeKind.COMMON, null, Claim("Finish the work", listOf(1, 2)))),
+        setOf(1, 2), intervention, "next_step")
 
     @Test fun oneSpeakerCannotTriggerIntervention() {
         val session = Conversation().start("Alex", "Sam").commit(Speaker.A, "Updates please")
@@ -70,21 +70,34 @@ class ConversationTest {
         assertNotEquals(edited.turns, edited.analysisTurns)
         assertNull(edited.pending)
         assertNull(edited.agreement)
+        assertEquals(accepted.graph, edited.graph)
+        assertEquals(listOf("Quiet time"), edited.base().active.filter { it.kind == NodeKind.REQUEST }.map { it.claim.text })
+        assertEquals(setOf(2), edited.base().mapped)
+    }
+
+    @Test fun analysisAfterACorrectionReplacesOnlyWhatThatTurnProduced() {
+        val session = dialogue()
+        val mapped = session.apply(session.revision, analysis(), 0)
+        val edited = mapped.edit(1, "Actually I want fewer meetings")
+        val remapped = edited.apply(edited.revision, GraphUpdate(listOf(NewNode(NodeKind.REQUEST, Speaker.A,
+            Claim("Fewer meetings", listOf(1)))), setOf(1)), 0)
+        assertEquals(listOf("Quiet time", "Fewer meetings"), remapped.graph.active.map { it.claim.text })
+        assertTrue(remapped.remap.isEmpty())
+        assertEquals("Fewer meetings", remapped.analysis!!.views.first().request!!.text)
     }
 
     @Test fun emptyTurnsAreSkippedAndHistoryIsCapped() {
         var session = Conversation().start("Alex", "Sam")
         assertEquals(session, session.commit(Speaker.A, "  "))
-        repeat(8) { session = session.commit(Speaker.A, "Turn $it") }
-        assertThrows(IllegalArgumentException::class.java) { session.commit(Speaker.B, "Ninth") }
+        repeat(MAX_TURNS) { session = session.commit(Speaker.A, "Turn $it") }
+        assertThrows(IllegalArgumentException::class.java) { session.commit(Speaker.B, "One too many") }
     }
 
     @Test fun changedProposalResetsBothConfirmations() {
         val session = dialogue()
         val accepted = session.apply(session.revision, analysis(), 0).openSuggestion()
             .confirm(Speaker.A).confirm(Speaker.B)
-        val next = analysis().copy(intervention = Intervention(Claim("Try a weekly update?", listOf(1, 2)),
-            Claim("Try a weekly update", listOf(1, 2))))
+        val next = analysis(Intervention(Claim("Try a weekly update?", listOf(1, 2)), Claim("Try a weekly update", listOf(1, 2))))
         assertNull(accepted.apply(accepted.revision, next, 1000).agreement)
     }
 
@@ -101,9 +114,9 @@ class ConversationTest {
         val session = dialogue()
         val accepted = session.apply(session.revision, analysis(), 0).openSuggestion()
             .confirm(Speaker.A).confirm(Speaker.B).commit(Speaker.A, "Thanks, that helps.")
-        val noSuggestion = analysis().copy(intervention = null)
+        val noSuggestion = analysis(null)
         assertTrue(accepted.apply(accepted.revision, noSuggestion, 1000).agreement!!.complete)
-        val justQuestion = analysis().copy(intervention = Intervention(Claim("How did it go?", listOf(1, 2)), null))
+        val justQuestion = analysis(Intervention(Claim("How did it go?", listOf(1, 2)), null))
         assertTrue(accepted.apply(accepted.revision, justQuestion, 1000).agreement!!.complete)
     }
 

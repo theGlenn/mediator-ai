@@ -17,9 +17,10 @@ fun main(args: Array<String>) {
     Engine(EngineConfig(model.absolutePath, Backend.CPU(), maxNumTokens = 8192)).use { engine ->
         engine.initialize()
         val firstOnly = listOf(Turn(1, Speaker.A, "I need a daily update because I am responsible for delivery."))
-        val firstAnalysis = engine.createConversation(GemmaAnalysis.configuration()).use {
-            GemmaAnalysis.run(it, firstOnly) { text -> println("Single-speaker synthetic output: $text") }
+        val opening = engine.createConversation(GemmaAnalysis.configuration()).use {
+            GemmaAnalysis.run(it, Graph(), firstOnly) { text -> println("Single-speaker synthetic output: $text") }
         }
+        val firstAnalysis = Graph().apply(opening).projection(opening.intervention)
         check(firstAnalysis.views.single { it.speaker == Speaker.A }.request != null)
         check(firstAnalysis.views.single { it.speaker == Speaker.B }.request == null)
         check(firstAnalysis.commonGround == null && firstAnalysis.intervention == null)
@@ -39,7 +40,17 @@ fun main(args: Array<String>) {
             val started = System.nanoTime()
             var raw = ""
             try {
-                val analysis = engine.createConversation(GemmaAnalysis.configuration()).use { GemmaAnalysis.run(it, turns) { text -> raw = text } }
+                // Replays the dialogue one turn at a time, as a live session builds its map.
+                var graph = Graph()
+                var result: Analysis? = null
+                for (count in 1..turns.size) {
+                    val update = engine.createConversation(GemmaAnalysis.configuration()).use {
+                        GemmaAnalysis.run(it, graph, turns.take(count)) { text -> raw = text; println("${example["id"].asString} turn $count: $text") }
+                    }
+                    graph = graph.apply(update)
+                    result = graph.projection(update.intervention)
+                }
+                val analysis = checkNotNull(result)
                 check(analysis.views.all { it.request != null }) { "Explicit requests were left empty in a test dialogue." }
                 check(analysis.intervention != null) { "An unresolved test dialogue did not produce a question." }
                 if (example["id"].asString == "correction") {
@@ -48,7 +59,7 @@ fun main(args: Array<String>) {
                 if (example["id"].asString == "unknown-concern") {
                     check(analysis.views.all { it.concern == null } && analysis.commonGround == null) { "Unstated reasons and shared goals must stay absent." }
                 }
-                reports += mapOf("id" to example["id"].asString, "analysis" to analysis,
+                reports += mapOf("id" to example["id"].asString, "analysis" to analysis, "graph" to graph,
                     "hostCpuMs" to (System.nanoTime() - started) / 1_000_000,
                     "review" to example["review"].asString, "humanUseful" to null)
                 println("${example["id"].asString}: structurally grounded")

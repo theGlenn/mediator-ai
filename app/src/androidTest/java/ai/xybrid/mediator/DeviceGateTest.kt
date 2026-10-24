@@ -11,17 +11,22 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Requires USB-provisioned model files. No mock model, network, or silently skipped cases. */
+/**
+ * Requires USB-provisioned model files. No mock model, network, or silently skipped cases. Each dialogue is
+ * replayed one turn at a time, as in a live session, so every check runs on the incrementally built map.
+ */
 @RunWith(AndroidJUnit4::class)
 class DeviceGateTest {
-    @Test fun bothRuntimesAndTenGroundedDialogues() = runBlocking {
+    @Test fun bothRuntimesAndGroundedDialogues() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val runtime = LocalRuntime(context)
         val reports = mutableListOf<Map<String, Any?>>()
         try {
             runtime.initialize { }
             assertNotNull(runtime.speechModel)
-            val first = runtime.analyze(listOf(Turn(1, Speaker.A, "I need updates to plan delivery."))).analysis
+            val opening = runtime.analyze(Graph(), listOf(Turn(1, Speaker.A, "I need updates to plan delivery.")))
+            assertNull(opening.update.intervention)
+            val first = Graph().apply(opening.update).projection(opening.update.intervention)
             assertNotNull(first.views.single { it.speaker == Speaker.A }.request)
             assertNull(first.views.single { it.speaker == Speaker.B }.request)
             assertNull(first.intervention)
@@ -33,12 +38,22 @@ class DeviceGateTest {
                     val turn = it.asJsonObject
                     Turn(turn["id"].asInt, Speaker.valueOf(turn["speaker"].asString), turn["text"].asString, typed = true)
                 }
-                runtime.prepareNext() // Live turns give the background conversation setup time to finish.
-                val start = SystemClock.elapsedRealtime()
+                var graph = Graph()
                 var decoded: Analysis? = null
+                val updates = mutableListOf<Map<String, Any?>>()
                 try {
-                    val (result, gemma) = runtime.analyze(turns)
+                    var result: Analysis? = null
+                    for (count in 1..turns.size) {
+                        runtime.prepareNext() // Live turns give the background conversation setup time to finish.
+                        val start = SystemClock.elapsedRealtime()
+                        val (update, gemma) = runtime.analyze(graph, turns.take(count))
+                        graph = graph.apply(update)
+                        result = graph.projection(update.intervention)
+                        updates += mapOf("turn" to count, "analysisMs" to SystemClock.elapsedRealtime() - start, "gemma" to gemma,
+                            "reason" to update.reason)
+                    }
                     decoded = result
+                    checkNotNull(result)
                     check(result.views.all { it.request != null }) { "Explicit requests were left empty in a test dialogue." }
                     check(result.intervention != null) { "An unresolved test dialogue did not produce a question." }
                     if (example["id"].asString == "correction") {
@@ -48,18 +63,19 @@ class DeviceGateTest {
                         check(result.views.all { it.concern == null } && result.commonGround == null) { "Unstated reasons and shared goals must stay absent." }
                     }
                     reports += mapOf("id" to example["id"].asString, "backend" to runtime.backendLabel,
-                        "analysisMs" to SystemClock.elapsedRealtime() - start, "gemma" to gemma,
-                        "analysis" to result, "review" to example["review"].asString,
+                        "analysisMs" to updates.last()["analysisMs"], "updates" to updates,
+                        "analysis" to result, "graph" to graph, "review" to example["review"].asString,
                         "humanUseful" to null)
                 } catch (error: Exception) {
                     // Messages are fixed gate/codec strings; the synthetic fixture text is already public.
                     reports += mapOf("id" to example["id"].asString, "error" to error.javaClass.simpleName,
-                        "message" to error.message, "cause" to error.cause?.toString(), "analysis" to decoded)
+                        "message" to error.message, "cause" to error.cause?.toString(), "analysis" to decoded,
+                        "graph" to graph, "updates" to updates)
                 }
             }
             // Synthetic fixtures only. Live session content is never written to this report.
             File(context.getExternalFilesDir(null), "evaluation-report.json").writeText(Gson().toJson(reports))
-            assertEquals("All ten cases must pass structural and evidence validation; inspect evaluation-report.json", 10, reports.size)
+            assertEquals("Every case must report; inspect evaluation-report.json", cases.size(), reports.size)
             assertTrue("One or more real model outputs failed. See evaluation-report.json", reports.none { it.containsKey("error") })
         } finally { runtime.close() }
     }

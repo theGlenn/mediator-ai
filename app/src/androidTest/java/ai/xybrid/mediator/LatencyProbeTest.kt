@@ -86,11 +86,11 @@ class LatencyProbeTest {
         runtime.prepareNext() // As during a live turn, background conversation setup finishes first.
         val start = SystemClock.elapsedRealtime()
         try {
-            val generated = runtime.generate(turns, decoding)
+            val generated = runtime.generate(Graph(), turns, decoding)
             row["totalMs"] = SystemClock.elapsedRealtime() - start
             row["gemma"] = generated.gemma
             row["raw"] = generated.raw // Synthetic fixture output, kept to diagnose invalid variants.
-            row["analysis"] = runCatching { AnalysisCodec.decode(generated.raw, turns) }
+            row["analysis"] = runCatching { AnalysisCodec.decode(generated.raw, Graph(), turns) }
                 .onFailure { row["invalid"] = it.cause?.javaClass?.simpleName ?: it.javaClass.simpleName }.getOrNull()
         } catch (error: Exception) {
             row["error"] = "${error.javaClass.simpleName}: ${error.message?.take(600)}"

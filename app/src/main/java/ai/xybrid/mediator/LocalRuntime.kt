@@ -28,7 +28,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-internal data class TimedAnalysis(val analysis: Analysis, val gemma: GemmaMetrics)
+internal data class TimedUpdate(val update: GraphUpdate, val gemma: GemmaMetrics)
 internal data class Generation(val raw: String, val gemma: GemmaMetrics)
 
 /**
@@ -114,16 +114,17 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
         }
     }
 
-    suspend fun analyze(turns: List<Turn>): TimedAnalysis {
-        val generated = generate(turns)
-        return TimedAnalysis(AnalysisCodec.decode(generated.raw, turns), generated.gemma)
+    /** Maps the turns [graph] does not yet cover. */
+    suspend fun analyze(graph: Graph, turns: List<Turn>): TimedUpdate {
+        val generated = generate(graph, turns)
+        return TimedUpdate(AnalysisCodec.decode(generated.raw, graph, turns), generated.gemma)
     }
 
     /** Unvalidated output for [analyze] and device probes; never display it without decoding. */
-    suspend fun generate(turns: List<Turn>, decoding: Decoding = this.decoding): Generation = withContext(Dispatchers.IO) {
+    suspend fun generate(graph: Graph, turns: List<Turn>, decoding: Decoding = this.decoding): Generation = withContext(Dispatchers.IO) {
         mutex.withLock {
             currentCoroutineContext().ensureActive()
-            require(turns.isNotEmpty() && turns.size <= 8)
+            require(AnalysisCodec.pending(graph, turns).isNotEmpty() && turns.size <= MAX_TURNS)
             val setupStart = SystemClock.elapsedRealtime()
             val prepared = spare?.takeIf { decoding == this@LocalRuntime.decoding }
             if (prepared == null) runCatching { spare?.close() }
@@ -134,7 +135,7 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
             try {
                 currentCoroutineContext().ensureActive()
                 val generateStart = SystemClock.elapsedRealtime()
-                val raw = GemmaAnalysis.generate(active, turns, decoding.constrained)
+                val raw = GemmaAnalysis.generate(active, graph, turns, decoding.constrained)
                 val metrics = metrics(active, generateStart - setupStart, SystemClock.elapsedRealtime() - generateStart)
                 currentCoroutineContext().ensureActive()
                 Generation(raw, metrics)

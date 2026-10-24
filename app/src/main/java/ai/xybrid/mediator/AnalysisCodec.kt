@@ -5,48 +5,73 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 
 /**
- * Every generated token costs a full constrained decode step on the phone, so the wire format carries
- * only citations the app cannot infer. While each speaker has at most one turn, claims are plain text
- * citing that turn implicitly. Once anyone has several turns, every A/B claim is {"t":text,"e":turn_id};
- * one form per output keeps E2B from writing JSON inside a string. Shared claims are plain text, cited by
- * each speaker's request turn (else concern turn, else latest turn).
+ * Wire format for one incremental map update. Gemma sees the active graph and the unmapped turns, and
+ * returns only additions: per-speaker claims from their new turns, an optional link from each claim to an
+ * existing node, an optional common ground, and whether to intervene. Every generated token costs a full
+ * constrained decode step on the phone, so citations the app can infer are omitted: a claim cites its
+ * speaker's only new turn unless they have several, and shared claims cite each speaker's anchor claim.
  */
 internal object AnalysisCodec {
-    fun schemaFor(turns: List<Turn>): String {
-        val shared = if (turns.map { it.speaker }.toSet().size == 2) TEXT else EMPTY
-        val cited = cited(turns)
-        val views = Speaker.entries.joinToString(",") { speaker ->
-            val owned = ownedSchema(turns.filter { it.speaker == speaker }.map { it.id }, cited)
-            """"${speaker.name}":{"type":"object","additionalProperties":false,"properties":{"request":$owned,"concern":$owned},"required":["request","concern"]}"""
+    val reasons = listOf("impasse", "misunderstanding", "common_ground", "next_step")
+
+    /** Turns the next update must map, oldest first. */
+    fun pending(graph: Graph, turns: List<Turn>) = turns.filter { it.id !in graph.mapped }
+
+    fun schemaFor(graph: Graph, turns: List<Turn>): String {
+        val fresh = pending(graph, turns)
+        val both = turns.map { it.speaker }.toSet().size == 2
+        val targets = graph.active.filter { it.owner != null }.map { it.id }
+        val owned = Speaker.entries.joinToString(",") { speaker ->
+            """"${speaker.name}":${ownedSchema(fresh.filter { it.speaker == speaker }.map { it.id }, targets)}"""
         }
+        val intervene = if (!both) NONE else """{"anyOf":[$NONE,{"type":"object","additionalProperties":false,"properties":{
+            "why":{"type":"string","enum":[${reasons.joinToString(",") { "\"$it\"" }}]},"question":$TEXT,"proposal":$TEXT},
+            "required":["why","question","proposal"]}]}"""
         // llguidance otherwise permits newlines between keys, and each one costs a decode step.
         return """{"type":"object","additionalProperties":false,"x-guidance":{"whitespace_flexible":false},"properties":{
-          $views,"common":$shared,"question":$shared,"proposal":$shared},
-          "required":["A","B","common","question","proposal"]}"""
+          $owned,"common":${if (both) TEXT else EMPTY},"intervene":$intervene},"required":["A","B","common","intervene"]}"""
     }
 
-    private fun cited(turns: List<Turn>) = turns.groupingBy { it.speaker }.eachCount().values.any { it > 1 }
-
-    private fun ownedSchema(ids: List<Int>, cited: Boolean) = when {
-        ids.isEmpty() -> EMPTY
-        !cited -> TEXT
-        else -> """{"type":"object","additionalProperties":false,"properties":{"t":$TEXT,"e":{"type":"integer","enum":[${ids.joinToString(",")}]}},"required":["t","e"]}"""
+    private fun ownedSchema(ids: List<Int>, targets: List<Int>): String {
+        if (ids.isEmpty()) return """{"type":"array","maxItems":0}"""
+        val evidence = if (ids.size > 1) ""","e":{"type":"integer","enum":[${ids.joinToString(",")}]}""" else ""
+        val link = if (targets.isEmpty()) "" else ""","link":{"type":"object","additionalProperties":false,"properties":{
+            "rel":{"type":"string","enum":["replaces","conflicts","supports"]},"to":{"type":"integer","enum":[${targets.joinToString(",")}]}},
+            "required":["rel","to"]}"""
+        val required = if (ids.size > 1) """["k","t","e"]""" else """["k","t"]"""
+        return """{"type":"array","maxItems":4,"items":{"type":"object","additionalProperties":false,"properties":{
+            "k":{"type":"string","enum":["request","concern"]},"t":$TEXT$evidence$link},"required":$required}}"""
     }
 
-    fun decode(raw: String, turns: List<Turn>): Analysis = try {
-        val root = JsonParser.parseString(raw).asJsonObject.exact("A", "B", "common", "question", "proposal")
-        val views = Speaker.entries.map { speaker ->
-            val view = root[speaker.name].asJsonObject.exact("request", "concern")
-            SpeakerView(speaker, owned(view["request"], turns, speaker), owned(view["concern"], turns, speaker))
+    fun decode(raw: String, graph: Graph, turns: List<Turn>): GraphUpdate = try {
+        val fresh = pending(graph, turns)
+        require(fresh.isNotEmpty())
+        val root = JsonParser.parseString(raw).asJsonObject.exact("A", "B", "common", "intervene")
+        val owned = Speaker.entries.flatMap { speaker ->
+            val ids = fresh.filter { it.speaker == speaker }.map { it.id }
+            root[speaker.name].asJsonArray.also { require(ids.isNotEmpty() || it.isEmpty) }
+                .mapNotNull { owned(it.asJsonObject, graph, speaker, ids) }
+        }.distinctBy { Triple(it.owner, it.kind, it.claim.text.lowercase(java.util.Locale.ROOT)) }
+        val mapped = fresh.map { it.id }.toSet()
+        val trial = graph.apply(GraphUpdate(owned, mapped))
+        val sources = Speaker.entries.map { speaker ->
+            trial.anchor(speaker)?.claim?.evidence?.first() ?: turns.lastOrNull { it.speaker == speaker }?.id
         }
-        val sources = views.map { view ->
-            (view.request ?: view.concern)?.evidence?.single() ?: turns.lastOrNull { it.speaker == view.speaker }?.id
+        val common = label(root["common"])
+            ?.takeIf { text -> graph.latest(null, NodeKind.COMMON)?.claim?.text?.equals(text, ignoreCase = true) != true }
+            ?.let { NewNode(NodeKind.COMMON, null, Claim(it, sources.map { id -> requireNotNull(id) })) }
+        val intervene = root["intervene"].asJsonObject
+        val why = intervene["why"].asString
+        val intervention = if (why == "none") null.also { intervene.exact("why") } else {
+            require(why in reasons)
+            intervene.exact("why", "question", "proposal")
+            val evidence = sources.map { requireNotNull(it) }
+            val question = label(intervene["question"])
+            val proposal = label(intervene["proposal"])
+            require(question != null || proposal == null)
+            question?.let { Intervention(Claim(it, evidence), proposal?.let { text -> Claim(text, evidence) }) }
         }
-        val ground = shared(root["common"], sources)
-        val question = shared(root["question"], sources)
-        val proposal = shared(root["proposal"], sources)
-        require(question != null || proposal == null)
-        Analysis(views, ground, question?.let { Intervention(it, proposal) })
+        GraphUpdate(owned + listOfNotNull(common), mapped, intervention, why.takeIf { intervention != null })
     } catch (error: Exception) {
         throw IllegalArgumentException("The model response did not pass grounding checks. Retry or shorten the turn.", error)
     }
@@ -56,21 +81,27 @@ internal object AnalysisCodec {
         return this
     }
 
-    private fun owned(value: JsonElement, turns: List<Turn>, owner: Speaker): Claim? {
-        val ids = turns.filter { it.speaker == owner }.map { it.id }
-        if (ids.isEmpty()) return null.also { require(label(value) == null) }
-        if (!cited(turns)) return label(value)?.let { text -> Claim(text, ids) }
-        val obj = value.asJsonObject.exact("t", "e")
-        val evidence = obj["e"]
-        require(evidence.isJsonPrimitive && evidence.asJsonPrimitive.isNumber && evidence.asString.matches(Regex("[1-8]")))
-        require(evidence.asInt in ids)
-        return label(obj["t"])?.let { text -> Claim(text, listOf(evidence.asInt)) }
+    private fun owned(obj: JsonObject, graph: Graph, speaker: Speaker, ids: List<Int>): NewNode? {
+        require(obj.keySet().containsAll(listOf("k", "t")) && obj.keySet().all { it in setOf("k", "t", "e", "link") })
+        require(("e" in obj.keySet()) == (ids.size > 1))
+        val kind = when (obj["k"].asString) { "request" -> NodeKind.REQUEST; "concern" -> NodeKind.CONCERN; else -> error("kind") }
+        val turn = if (ids.size == 1) ids.single() else obj["e"].asInt.also { require(it in ids) }
+        val text = label(obj["t"]) ?: return null
+        val existing = graph.active.any { it.owner == speaker && it.kind == kind && it.claim.text.equals(text, ignoreCase = true) }
+        if (existing) return null
+        return NewNode(kind, speaker, Claim(text, listOf(turn)), obj["link"]?.let { link(it.asJsonObject, graph, speaker, kind) })
     }
 
-    /** Shared claims require both participants; their sources come from each speaker's own claims. */
-    private fun shared(value: JsonElement, sources: List<Int?>): Claim? {
-        val text = label(value) ?: return null
-        return Claim(text, sources.map { requireNotNull(it) })
+    /** Links are structure, not claims: an implausible one is dropped rather than failing the update. */
+    private fun link(obj: JsonObject, graph: Graph, speaker: Speaker, kind: NodeKind): Pair<LinkKind, Int>? {
+        obj.exact("rel", "to")
+        val target = graph.active.find { it.id == obj["to"].asInt } ?: return null
+        return when (obj["rel"].asString) {
+            "replaces" -> (LinkKind.REPLACES to target.id).takeIf { target.owner == speaker && target.kind == kind }
+            "conflicts" -> (LinkKind.CONFLICTS to target.id).takeIf { target.owner != null && target.owner != speaker }
+            "supports" -> (LinkKind.SUPPORTS to target.id).takeIf { target.owner != null && target.owner != speaker }
+            else -> error("rel")
+        }
     }
 
     /** Null for absent or placeholder labels, which are never displayed as interpretations. */
@@ -85,4 +116,5 @@ internal object AnalysisCodec {
     // Labels exclude quotes, braces and backslashes so wire syntax cannot leak into displayed text.
     private const val TEXT = """{"type":"string","pattern":"^[^\"{}\\\\]{0,180}${'$'}"}"""
     private const val EMPTY = """{"type":"string","const":""}"""
+    private const val NONE = """{"type":"object","additionalProperties":false,"properties":{"why":{"type":"string","const":"none"}},"required":["why"]}"""
 }

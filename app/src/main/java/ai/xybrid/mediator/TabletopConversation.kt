@@ -62,7 +62,7 @@ private fun ParticipantSide(
 ) {
     val session = state.conversation
     val active = session.recording == speaker
-    val canSpeak = state.ready && !state.busy && session.recording == null && session.turns.size < 8
+    val canSpeak = state.ready && !state.busy && session.recording == null && session.turns.size < MAX_TURNS
     val background = if (speaker == Speaker.A) Color(0xFFE8EFF8) else Color(0xFFF7EBDD)
     Surface(modifier.fillMaxWidth().semantics {
         stateDescription = if (active) "Active speaker" else "Inactive speaker"
@@ -77,7 +77,7 @@ private fun ParticipantSide(
                 active -> "Listening · ${state.seconds}s"
                 session.recording != null -> "${session.names[session.recording]} is speaking"
                 state.busy -> "A moment to reflect…"
-                session.turns.size >= 8 -> "Time to reflect together"
+                session.turns.size >= MAX_TURNS -> "Time to reflect together"
                 else -> "Space for your perspective"
             }
             Text(label, style = MaterialTheme.typography.labelLarge, color = TableGreen, textAlign = TextAlign.Center)
