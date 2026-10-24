@@ -38,6 +38,25 @@ class LatencyProbeTest {
      * active for later conversations on the same engine, so variants cannot share one. Speculative
      * variants run last for the same reason.
      */
+    /** Constrained GPU decoding round-trips full-vocabulary logits through the CPU every token. */
+    @Test fun gemmaCpu() = runBlocking {
+        val off = Decoding(speculative = false)
+        val rows = mutableListOf<Map<String, Any?>>()
+        for ((name, threads, decoding) in listOf(Triple("cpu4-constrained", 4, off),
+            Triple("cpu4-unconstrained", 4, off.copy(constrained = false)), Triple("cpu6-constrained", 6, off))) {
+            val runtime = LocalRuntime(context, decoding = decoding, cpuThreads = threads)
+            try {
+                val start = SystemClock.elapsedRealtime()
+                runtime.initialize { }
+                rows += mapOf("variant" to name, "id" to "initialize", "totalMs" to SystemClock.elapsedRealtime() - start,
+                    "backend" to runtime.backendLabel)
+                rows += attempt(runtime, 8192, name, decoding, "warm-up", dialogues().first().second)
+                for ((id, turns) in dialogues()) rows += attempt(runtime, 8192, name, decoding, id, turns)
+                write("latency-probe-gemma-cpu.json", rows)
+            } finally { runtime.close() }
+        }
+    }
+
     @Test fun gemmaVariants() = runBlocking {
         val off = Decoding(speculative = false)
         val variants = listOf(

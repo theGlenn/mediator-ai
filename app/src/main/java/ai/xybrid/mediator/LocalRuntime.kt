@@ -30,9 +30,10 @@ internal data class Generation(val raw: String, val gemma: GemmaMetrics)
 /**
  * Owns the two native runtimes. All initialization/inference/teardown runs off the UI thread.
  * [maxNumTokens] sizes Gemma's KV cache; [decoding] applies to every analysis unless a probe overrides it.
+ * [cpuThreads] forces Gemma onto CPU with that many threads instead of trying GPU first.
  */
 internal class LocalRuntime(private val context: Context, private val maxNumTokens: Int = 8192,
-    private val decoding: Decoding = Decoding()) {
+    private val decoding: Decoding = Decoding(), private val cpuThreads: Int? = null) {
     private val mutex = Mutex()
     private var engine: Engine? = null
     var speechModel: XybridModel? = null
@@ -62,7 +63,10 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
                 currentCoroutineContext().ensureActive()
                 val model = File(directory, "gemma-4-E2B-it.litertlm")
                 status("Loading Gemma on GPU and checking structured output…")
-                try {
+                if (cpuThreads != null) {
+                    engine = openEngine(model, Backend.CPU(threadCount = cpuThreads))
+                    backendLabel = "Gemma 4 E2B · CPU · $cpuThreads threads"
+                } else try {
                     engine = openEngine(model, Backend.GPU())
                     backendLabel = "Gemma 4 E2B · GPU"
                 } catch (gpuFailure: Exception) {
