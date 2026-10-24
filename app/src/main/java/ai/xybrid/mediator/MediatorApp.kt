@@ -286,7 +286,7 @@ private fun DeviceDetails(state: ScreenState) {
         TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide device check" else "Device check") }
         if (expanded) {
             Text(state.backend.ifEmpty { "Gemma and Whisper not loaded yet." }, style = MaterialTheme.typography.bodySmall)
-            if (state.ready) Text("Whisper Tiny English · Xybrid CPU · both models warmed", style = MaterialTheme.typography.bodySmall)
+            if (state.ready) Text("Whisper Tiny English · Xybrid CPU · 10 s encoder context · both models warmed", style = MaterialTheme.typography.bodySmall)
             state.analysisMillis?.let { Text("Analysis: ${it / 1000.0}s", style = MaterialTheme.typography.bodySmall) }
             state.endToCardMillis?.let { Text("Audio end to map/card: ${it / 1000.0}s", style = MaterialTheme.typography.bodySmall) }
             state.diagnostics.lastOrNull()?.let { timing ->

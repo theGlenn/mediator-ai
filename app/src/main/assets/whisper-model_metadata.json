@@ -5,7 +5,7 @@
     "type": "GgmlWhisper",
     "model_file": "ggml-tiny.en-q5_1.bin",
     "language": "en",
-    "audio_ctx": 0,
+    "audio_ctx": 500,
     "translate": false
   },
   "preprocessing": [],
