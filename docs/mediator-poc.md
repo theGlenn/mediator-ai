@@ -11,13 +11,15 @@ Source and commands: [the app README](../README.md).
 - Two names, 30-second recording turns with cumulative live transcript, deterministic map, evidence quotes, transcript corrections, typed-entry recovery, a bounded JSON analysis call, and dual confirmation.
 - Eight-turn cap, stale-result rejection, recording cancellation on backgrounding, session reset, one pending intervention, and a 60-second chime cooldown.
 - Unit tests, packaged-manifest check, ten synthetic evaluation dialogues, a real-model desktop probe, and a real-runtime Android instrumentation gate.
+- Tabletop follow-up: opposing participant panels with the upper half rotated 180°, a central suggestion orb, and one confirmation control per participant. The original graph, transcript, corrections, manual entry and device checks are available in **Debug**. Suggestions remain optional, with the existing chime/cooldown policy and no speech output.
+- Bounded live timing diagnostics: first nonblank partial, capture duration, ASR finalization, Gemma analysis and audio end to map application. Debug shows up to 20 completed analyses; `MediatorPerf` logcat entries contain only counts/timings. No transcript or audio persistence was added.
 
 ## Validation record
 
 | Check | Evidence / status |
 |---|---|
 | Android APK build | `:app:assembleDebug` succeeds with both native runtimes packaged; no duplicate native library conflict. |
-| Unit tests | **21 tests pass:** session policy, structured output, snapshot evidence, agreement persistence and repeated cancellation during native cleanup. |
+| Unit tests | **27 host tests pass:** the original 21 session/codec/cancellation checks plus six timing tests. The original Mac/native validation below predates the tabletop follow-up. |
 | Android lint | `:app:lintDebug` passes; version/target-ABI notices are not device results. |
 | Offline APK manifest | Packaged permission inspection confirms microphone permission and no `INTERNET` or `ACCESS_NETWORK_STATE`. |
 | Model provisioning | Both pinned weight downloads verified on the VM and Mac, then staged over USB. Gemma on Mac: `<mac build dir>/mediator-android/models/gemma-4-E2B-it.litertlm`. |
@@ -54,6 +56,23 @@ Both pinned models match their host SHA-256 checksums and are staged on the phon
 OnePlus CPH2655, Android 16 / API 36, 4,096-byte pages. Gemma 4 E2B uses **GPU**. The final real native test passed in **129.024 seconds** and extracted both requests plus a question in all ten synthetic dialogues, with valid evidence ownership. Median analysis is **10.758 seconds** (range 9.144–12.371 seconds); nine cases exceed the ten-second rehearsal requirement. [Full measured outputs and source hashes](mediator-device-evaluation.json).
 
 The native compatibility gate is clear. Latency needs improvement or an explicitly revised acceptance target before calling the demo rehearsal-ready. Live speech accuracy, audio-end-to-card timing, human usefulness ratings and three airplane-mode rehearsals remain open. The test warmed Whisper with silence; it did not record the microphone or change phone connectivity.
+
+## Tabletop and latency follow-up
+
+The tester reports that live speech and the growing conversation map work well. This is qualitative feedback, without a recorded latency or usefulness score. The live round was not saved: the installed original POC had no per-turn timing logger or conversation persistence. A read-only check found only the synthetic evaluation report on disk, and the retained app logcat snapshot yielded lifecycle messages rather than inference measurements. Updating/restarting the original app would lose its in-memory round.
+
+The tabletop follow-up passes host APK/instrumentation builds, 27 unit tests, Android lint and the packaged offline-manifest check. It still needs a phone UI rehearsal; these checks do not establish faster inference or on-device layout quality. Switching between tabletop and Debug uses the same session and does not reload the models.
+
+The pinned libraries expose two distinct latency paths:
+
+| Stage | Current configuration | Next controlled probe |
+|---|---|---|
+| Speech | Whisper Tiny English Q5_1, **whisper.cpp CPU / four threads**, 16 kHz mono. Streaming uses five-second windows with a half-second overlap and early passes at 1.5 and 3 seconds. VAD is off. `audio_ctx: 0` selects the full 1,500-frame / 30-second encoder context. | Compare the existing baseline with `defaultStreamingConfig().copy(audioCtx = 500u)` in warm-up and capture. This covers ten seconds of encoder context for five-second windows. Measure finalization and word retention on the OnePlus, including pauses, quiet speech, long turns and mid-word stops. No speedup is established yet. |
+| Analysis | Gemma GPU, thinking already disabled, a fresh conversation and full prompt per analysis, constrained JSON with a 256-token maximum. The existing 9.14–12.37-second measurements exclude ASR. | Enable LiteRT-LM benchmark data in an isolated follow-up and record prefill/decode counts and rates before changing prompt/output length. Preserve evidence, correction and unknown-concern quality checks. |
+
+The Kotlin 0.13.1 streaming config exposes `audioCtx`, language, sample rate and VAD, but no chunk-size or thread setter. Static inspection of its pinned core also found that this feed/flush route does not use VAD segmentation; adding a Silero model is not an evidenced speed improvement here. The app's RMS gate rejects silent turns after capture; it feeds silence to ASR during recording. Normal `flush()` drains queued audio and final-tail inference, so speech finalization and Gemma time must be measured separately.
+
+Sources: [Xybrid v0.13.1 streaming window selection](https://github.com/xybrid-ai/xybrid/blob/v0.13.1/crates/xybrid-core/src/streaming/session.rs#L539), [Whisper context guidance](https://github.com/xybrid-ai/xybrid/blob/v0.13.1/crates/xybrid-whisper/src/params.rs), [Kotlin streaming configuration](https://github.com/xybrid-ai/xybrid/blob/v0.13.1/bindings/kotlin/src/main/kotlin/ai/xybrid/Xybrid.kt#L537), [LiteRT-LM 0.18.0 benchmark metrics](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/kotlin/java/com/google/ai/edge/litertlm/Conversation.kt#L674).
 
 ## Sources
 

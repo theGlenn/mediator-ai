@@ -4,13 +4,16 @@ import android.app.Application
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.SystemClock
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -26,8 +29,10 @@ internal data class ScreenState(
     val partial: String = "",
     val seconds: Int = 30,
     val error: String? = null,
+    val retrySpeaker: Speaker? = null,
     val analysisMillis: Long? = null,
     val endToCardMillis: Long? = null,
+    val diagnostics: List<AnalysisTiming> = emptyList(),
 )
 
 internal class MediatorViewModel(application: Application) : AndroidViewModel(application) {
@@ -39,11 +44,10 @@ internal class MediatorViewModel(application: Application) : AndroidViewModel(ap
     private var timer: Job? = null
     private var chime: Job? = null
     private var chimeTone: ToneGenerator? = null
-    private var audioEndedAt: Long? = null
 
     fun loadModels() {
         if (mutable.value.busy) return
-        mutable.update { it.copy(busy = true, error = null) }
+        mutable.update { it.copy(busy = true, error = null, retrySpeaker = null) }
         val revision = mutable.value.conversation.revision
         work.launch {
             try {
@@ -59,35 +63,35 @@ internal class MediatorViewModel(application: Application) : AndroidViewModel(ap
     fun start(a: String, b: String) {
         if (!mutable.value.ready || mutable.value.busy) return
         mutable.update { it.copy(conversation = it.conversation.start(a.take(30), b.take(30)),
-            status = "Choose who speaks first.", error = null, analysisMillis = null, endToCardMillis = null) }
+            status = "Choose who speaks first.", error = null, retrySpeaker = null, analysisMillis = null, endToCardMillis = null,
+            diagnostics = emptyList()) }
     }
 
     fun record(speaker: Speaker) {
         if (!canTakeTurn()) return
         stopChime()
         mutable.update { it.copy(conversation = it.conversation.beginTurn(speaker),
-            partial = "", seconds = 30, status = "Listening…", error = null) }
+            partial = "", seconds = 30, status = "Listening…", error = null, retrySpeaker = null) }
         val revision = mutable.value.conversation.revision
-        audioEndedAt = null
         microphone.prepare()
         var captureTimer: Job? = null
         work.launch {
             try {
-                val text = microphone.record(requireNotNull(runtime.speechModel)) { partial ->
+                val recording = microphone.record(requireNotNull(runtime.speechModel)) { partial ->
                     mutable.update { if (it.conversation.revision == revision) it.copy(partial = partial) else it }
                 }
                 captureTimer?.cancel()
                 if (mutable.value.conversation.revision != revision) return@launch
                 mutable.update { it.copy(conversation = it.conversation.stopRecording(), partial = "") }
-                if (text.isBlank()) {
-                    mutable.update { it.copy(status = "No speech detected. Try again or use typed entry.") }
+                if (recording.text.isBlank()) {
+                    mutable.update { it.copy(status = "No speech detected. Try again, or open Debug to type a turn.") }
                 } else {
-                    mutable.update { it.copy(conversation = it.conversation.commit(speaker, text)) }
-                    analyze()
+                    mutable.update { it.copy(conversation = it.conversation.commit(speaker, recording.text)) }
+                    analyze(AnalysisSource.RECORDED, recording.timing)
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) {
-                if (mutable.value.conversation.revision == revision) fail(error)
+                if (mutable.value.conversation.revision == revision) fail(error, speaker)
             } finally {
                 captureTimer?.cancel()
                 if (mutable.value.conversation.revision == revision) {
@@ -109,7 +113,6 @@ internal class MediatorViewModel(application: Application) : AndroidViewModel(ap
 
     fun done() {
         if (mutable.value.conversation.recording == null || mutable.value.busy) return
-        audioEndedAt = SystemClock.elapsedRealtime()
         mutable.update { it.copy(busy = true, status = "Finishing the transcript…") }
         timer?.cancel()
         microphone.stop()
@@ -118,38 +121,42 @@ internal class MediatorViewModel(application: Application) : AndroidViewModel(ap
     fun typed(speaker: Speaker, text: String) {
         if (!canTakeTurn() || text.isBlank()) return
         stopChime()
-        audioEndedAt = null
         mutable.update { it.copy(conversation = it.conversation.commit(speaker, text.take(1000), typed = true), error = null) }
-        work.launch { analyze() }
+        work.launch { analyze(AnalysisSource.TYPED) }
     }
 
     fun edit(id: Int, text: String) {
         if (mutable.value.busy || mutable.value.conversation.recording != null || text.isBlank()) return
         stopChime()
-        audioEndedAt = null
         mutable.update { it.copy(conversation = it.conversation.edit(id, text.take(1000)), error = null) }
-        work.launch { analyze() }
+        work.launch { analyze(AnalysisSource.EDIT) }
     }
 
     fun retry() {
         if (mutable.value.busy || mutable.value.conversation.recording != null || mutable.value.conversation.turns.isEmpty()) return
-        work.launch { analyze() }
+        work.launch { analyze(AnalysisSource.RETRY) }
     }
 
-    private suspend fun analyze() {
+    private suspend fun analyze(source: AnalysisSource, audio: AudioTiming? = null) {
         val snapshot = mutable.value.conversation
-        mutable.update { it.copy(busy = true, status = "Finding the requests and common ground…", error = null) }
+        mutable.update { it.copy(busy = true, status = "Finding the requests and common ground…", error = null, retrySpeaker = null) }
         val startedAt = SystemClock.elapsedRealtime()
         try {
             val result = runtime.analyze(snapshot.turns)
+            currentCoroutineContext().ensureActive()
             val now = SystemClock.elapsedRealtime()
+            val current = mutable.value.conversation
+            if (current.revision != snapshot.revision || !current.active || current.recording != null) return
+            val timing = AnalysisTiming.complete(source, snapshot.turns.size, startedAt, now, audio)
             mutable.update {
                 if (it.conversation.revision != snapshot.revision) it else it.copy(
                     conversation = it.conversation.apply(snapshot.revision, result, now),
-                    analysisMillis = now - startedAt, endToCardMillis = audioEndedAt?.let { end -> now - end },
+                    analysisMillis = timing.analysisMillis, endToCardMillis = timing.endToMapMillis,
+                    diagnostics = timing.appendTo(it.diagnostics),
                     status = if (result.intervention != null && snapshot.turns.map { t -> t.speaker }.distinct().size == 2)
                         "A question is ready when you are." else "Map updated. Choose the next speaker.")
             }
+            Log.i("MediatorPerf", timing.logMetadata())
             scheduleChime(snapshot.revision)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (error: Exception) { if (mutable.value.conversation.revision == snapshot.revision) fail(error) }
@@ -194,7 +201,10 @@ internal class MediatorViewModel(application: Application) : AndroidViewModel(ap
             val session = if (end) it.conversation.end() else it.conversation.copy(
                 revision = it.conversation.revision + 1, recording = null, pending = null,
                 suggestionOpen = false, agreement = it.conversation.agreement?.takeIf { agreement -> agreement.complete })
-            it.copy(conversation = session, busy = true, partial = "", error = null,
+            it.copy(conversation = session, busy = true, partial = "", error = null, retrySpeaker = null,
+                analysisMillis = if (end) null else it.analysisMillis,
+                endToCardMillis = if (end) null else it.endToCardMillis,
+                diagnostics = if (end) emptyList() else it.diagnostics,
                 status = if (end) "Session cleared. Models remain warm for the next conversation." else "Paused. Choose a speaker to continue.")
         }
         val revision = mutable.value.conversation.revision
@@ -212,8 +222,9 @@ internal class MediatorViewModel(application: Application) : AndroidViewModel(ap
         runCatching { chimeTone?.stopTone() }
     }
 
-    private fun fail(error: Exception) {
-        mutable.update { it.copy(error = error.message ?: "The local model could not finish. Try again.", status = "Needs attention.") }
+    private fun fail(error: Exception, speaker: Speaker? = null) {
+        mutable.update { it.copy(error = error.message ?: "The local model could not finish. Try again.",
+            retrySpeaker = speaker, status = "Needs attention.") }
     }
 
     override fun onCleared() {

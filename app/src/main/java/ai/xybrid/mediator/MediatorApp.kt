@@ -17,8 +17,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -37,46 +39,63 @@ private val BColor = Color(0xFFF7EBDD)
 internal fun MediatorApp(model: MediatorViewModel) {
     val state by model.state.collectAsStateWithLifecycle()
     var evidence by remember { mutableStateOf<Claim?>(null) }
+    var evidenceFrom by remember { mutableStateOf<Speaker?>(null) }
     var edit by remember { mutableStateOf<Turn?>(null) }
     var typed by remember { mutableStateOf(false) }
     var permissionError by remember { mutableStateOf(false) }
     var requestedSpeaker by remember { mutableStateOf(Speaker.A) }
+    var debugMode by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         if (it) model.record(requestedSpeaker) else permissionError = true
     }
-    BackHandler(enabled = state.conversation.active) { model.end() }
+    val onRecord: (Speaker) -> Unit = { speaker ->
+        requestedSpeaker = speaker
+        if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+            model.record(speaker) else permission.launch(Manifest.permission.RECORD_AUDIO)
+    }
+    val showDebugEvidence: (Claim) -> Unit = { evidenceFrom = null; evidence = it }
+    LaunchedEffect(state.conversation.active) { if (!state.conversation.active) debugMode = false }
+    BackHandler(enabled = state.conversation.active) { if (debugMode) debugMode = false else model.end() }
     MaterialTheme(colorScheme = lightColorScheme(primary = Green, background = Paper,
         surface = Color.White, onSurface = Ink, onBackground = Ink)) {
         Scaffold(containerColor = Paper, contentWindowInsets = WindowInsets.safeDrawing) { insets ->
-            LazyColumn(Modifier.fillMaxSize().padding(insets), contentPadding = PaddingValues(20.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                item { Header(state.conversation.active) { model.end() } }
-                if (!state.conversation.active) {
-                    item { Setup(state, model::loadModels, model::start) }
-                } else {
-                    item {
-                        SpeakingControls(state, onRecord = { speaker ->
-                            requestedSpeaker = speaker
-                            if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
-                                model.record(speaker) else permission.launch(Manifest.permission.RECORD_AUDIO)
-                        }, onDone = model::done, onTyped = { typed = true })
+            if (state.conversation.active && !debugMode) {
+                TabletopConversation(state, Modifier.padding(insets), onRecord, model::done,
+                    model::openSuggestion, model::dismissSuggestion, model::confirm,
+                    onEvidence = { speaker, claim -> evidenceFrom = speaker; evidence = claim },
+                    onDebug = { debugMode = true }, onEnd = model::end)
+            } else {
+                LazyColumn(Modifier.fillMaxSize().padding(insets), contentPadding = PaddingValues(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    item { Header(state.conversation.active) { model.end() } }
+                    if (!state.conversation.active) {
+                        item { Setup(state, model::loadModels, model::start) }
+                    } else {
+                        item { OutlinedButton(onClick = { debugMode = false }, modifier = Modifier.fillMaxWidth()) { Text("Back to conversation") } }
+                        item {
+                            SpeakingControls(state, onRecord, onDone = model::done, onTyped = { typed = true })
+                        }
+                        item { Status(state, onRetry = {
+                            val speaker = state.retrySpeaker
+                            if (speaker != null) onRecord(speaker) else model.retry()
+                        }, retryLabel = if (state.retrySpeaker != null) "Record again" else "Retry analysis") }
+                        item { ConversationMap(state.conversation, showDebugEvidence) }
+                        if (state.conversation.pending != null) {
+                            item { Suggestion(state.conversation, model::openSuggestion, model::dismissSuggestion, model::confirm, showDebugEvidence) }
+                        }
+                        item { Text("THE CONVERSATION", style = MaterialTheme.typography.labelMedium, color = Green) }
+                        items(state.conversation.turns, key = { it.id }) { turn ->
+                            TurnCard(turn, state.conversation.names.getValue(turn.speaker),
+                                enabled = !state.busy && state.conversation.recording == null) { edit = turn }
+                        }
+                        item { DeviceDetails(state) }
                     }
-                    item { Status(state, model::retry) }
-                    item { ConversationMap(state.conversation) { evidence = it } }
-                    if (state.conversation.pending != null) {
-                        item { Suggestion(state.conversation, model::openSuggestion, model::dismissSuggestion, model::confirm) { evidence = it } }
-                    }
-                    item { Text("THE CONVERSATION", style = MaterialTheme.typography.labelMedium, color = Green) }
-                    items(state.conversation.turns, key = { it.id }) { turn ->
-                        TurnCard(turn, state.conversation.names.getValue(turn.speaker),
-                            enabled = !state.busy && state.conversation.recording == null) { edit = turn }
-                    }
-                    item { DeviceDetails(state) }
                 }
             }
         }
-        evidence?.let { claim -> EvidenceDialog(claim, state.conversation) { evidence = null } }
+        evidence?.let { claim -> EvidenceDialog(claim, state.conversation,
+            Modifier.rotate(if (evidenceFrom == Speaker.A) 180f else 0f)) { evidence = null } }
         edit?.let { turn ->
             TextEntryDialog("Correct ${state.conversation.names[turn.speaker]}'s turn", turn.text,
                 onDismiss = { edit = null }, onSave = { model.edit(turn.id, it); edit = null })
@@ -95,7 +114,7 @@ internal fun MediatorApp(model: MediatorViewModel) {
 private fun Header(active: Boolean, onEnd: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text("mediator", fontSize = 30.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+            Text(if (active) "mediator · debug" else "mediator", fontSize = 30.sp, fontWeight = FontWeight.SemiBold, color = Ink)
             Text("A little space to understand each other.", style = MaterialTheme.typography.bodySmall)
         }
         if (active) TextButton(onClick = onEnd) { Text("End session") }
@@ -154,7 +173,7 @@ private fun SpeakingControls(state: ScreenState, onRecord: (Speaker) -> Unit, on
 }
 
 @Composable
-private fun Status(state: ScreenState, onRetry: () -> Unit) {
+private fun Status(state: ScreenState, onRetry: () -> Unit, retryLabel: String = "Retry") {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         Text(state.status, style = MaterialTheme.typography.bodyMedium, color = Green)
@@ -162,7 +181,7 @@ private fun Status(state: ScreenState, onRetry: () -> Unit) {
             Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(12.dp)) {
                 Column(Modifier.padding(12.dp)) {
                     Text(message)
-                    TextButton(onClick = onRetry, enabled = !state.busy) { Text("Retry") }
+                    TextButton(onClick = onRetry, enabled = !state.busy) { Text(retryLabel) }
                 }
             }
         }
@@ -270,14 +289,29 @@ private fun DeviceDetails(state: ScreenState) {
             if (state.ready) Text("Whisper Tiny English · Xybrid CPU · both models warmed", style = MaterialTheme.typography.bodySmall)
             state.analysisMillis?.let { Text("Analysis: ${it / 1000.0}s", style = MaterialTheme.typography.bodySmall) }
             state.endToCardMillis?.let { Text("Audio end to map/card: ${it / 1000.0}s", style = MaterialTheme.typography.bodySmall) }
+            state.diagnostics.lastOrNull()?.let { timing ->
+                timing.firstPartialMillis?.let { Text("First words after capture starts: ${it / 1000.0}s", style = MaterialTheme.typography.bodySmall) }
+                timing.captureMillis?.let { Text("Audio captured: ${it / 1000.0}s", style = MaterialTheme.typography.bodySmall) }
+                timing.finalTranscriptMillis?.let { Text("ASR after Done: ${it / 1000.0}s", style = MaterialTheme.typography.bodySmall) }
+            }
+            if (state.diagnostics.isNotEmpty()) {
+                Text("THIS SESSION · COMPLETED ANALYSES", Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelSmall)
+                state.diagnostics.forEachIndexed { index, timing ->
+                    Text(buildString {
+                        append("${index + 1}. ${timing.source.name.lowercase()} · ${timing.turnCount} turns · Gemma ${timing.analysisMillis / 1000.0}s")
+                        timing.finalTranscriptMillis?.let { append(" · ASR finish ${it / 1000.0}s") }
+                        timing.endToMapMillis?.let { append(" · end to map ${it / 1000.0}s") }
+                    }, style = MaterialTheme.typography.bodySmall)
+                }
+            }
             Text("No network permission. No conversation saved to disk.", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
 
 @Composable
-private fun EvidenceDialog(claim: Claim, session: Conversation, onDismiss: () -> Unit) {
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("What this is based on") },
+private fun EvidenceDialog(claim: Claim, session: Conversation, modifier: Modifier = Modifier, onDismiss: () -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss, modifier = modifier, title = { Text("What this is based on") },
         text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(claim.text, fontWeight = FontWeight.SemiBold)

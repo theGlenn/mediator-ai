@@ -25,14 +25,14 @@ The target is the **OnePlus 13**. The APK includes only arm64 native libraries. 
 ## Two-minute demonstration
 
 1. Turn on airplane mode, turn Wi-Fi off, and mirror the phone over wired USB if desired. Choose notification volume before the demo. The chime uses Android's notification stream and respects system sound settings.
-2. Enter **Alex** and **Sam**. Start. Each turn permits 30 seconds; use **Done speaking** after roughly 10 seconds to keep the demonstration short.
+2. Enter **Alex** and **Sam**. Start, then lay the phone flat between them. Alex's half faces across the table; Sam's half faces the other way. Tap **Speak · 30s** on your own side; use **Done speaking** after roughly 10 seconds to keep the demonstration short. The active side is outlined and shows its timer and live transcript.
 3. Alex: “I need a regular update because I'm responsible for delivery.”
 4. Sam: “I want to deliver on time too. Constant check-ins break my focus.”
 5. Alex: “I don't need meetings all day. One reliable update would help me plan.”
 6. Sam: “A short update at four would work better than interruptions.”
-7. Show the map. Tap a request or concern to reveal the source quote. Concerns and common ground are visibly tentative. Use **Correct** if transcription misheard a turn.
-8. When the phone chimes, tap **Show suggestion**. Discuss the question. If a concrete next step is offered and works for both, each person separately taps **Works for me**. Only then does an agreement appear.
-9. **End session** clears the conversation and keeps the models warm for the next demonstration.
+7. Tap **Debug** to see the conversation map, transcript, corrections, manual entry and device details. Tap a request or concern to reveal the source quote. Concerns and common ground are visibly tentative. Use **Correct** if transcription misheard a turn. **Back to conversation** returns to the tabletop without resetting it.
+8. When the phone chimes, tap the center orb. Both sides show the question in their own reading direction. Discuss it. If a concrete next step is offered and works for both, each person separately taps **Works for me** on their own side. Only then does an agreement appear. **Let it pass** dismisses the question.
+9. **End** (or **End session** in Debug) clears the conversation and keeps the models warm for the next demonstration. Android Back returns from Debug to the tabletop; from the tabletop it ends the session.
 
 The lines are prompts for live input, not prerecorded outputs. Gemma generates the map and suggestion each time. **Type a turn instead · manual entry** is the labeled recovery path for venue noise. It is never presented as microphone capture.
 
@@ -53,6 +53,18 @@ adb pull /sdcard/Android/data/ai.xybrid.mediator/files/evaluation-report.json
 
 Unit tests cover evidence ownership, unknown sources, malformed output, session revisions, corrections, the eight-turn limit, chime suppression/cooldown, two distinct confirmations, and repeated cancellation while native cleanup is still draining. `verify_apk.py` inspects the packaged manifest, including dependency contributions, and fails if network permissions appear.
 
+### Live timing diagnostics
+
+**Debug → Device check** shows timings for the latest successful analysis and a history of up to 20 completed analyses in this session. Recorded turns separate time to the first nonblank partial (from capture start, including any initial silence), capture duration, ASR finalization after **Done**, Gemma analysis, and audio end to the map being applied. The last measure includes ASR cleanup and analysis, but does not measure display rendering. Typed turns, edits and retries have only an analysis duration. Session start/end clear this in-memory history.
+
+Successful analyses also emit timing/count metadata to Android logcat, with no transcript, names, quotes, prompts or audio:
+
+```sh
+adb logcat -d -v time -s MediatorPerf:I '*:S'
+```
+
+No live timing log existed in the original POC, so these samples start after installing the tabletop follow-up. The live round reported by the tester had no saved transcript or per-turn timings; its retained Android logs did not yield inference measurements. `evaluation-report.json` remains synthetic-only. A new timing sample is emitted only after a successful current-session analysis; silence, cancelled work and failures do not produce completed samples.
+
 The [host run](docs/mediator-host-evaluation.json) and [OnePlus run](docs/mediator-device-evaluation.json) each pass ten automatic cases. On OnePlus CPH2655 / Android 16, Gemma uses GPU and analysis takes 9.14–12.37 seconds (median 10.76 seconds), exceeding ten seconds in 9/10 cases. The [handoff](docs/mediator-poc.md) records the native gate and remaining semantic findings. Live microphone behavior, human usefulness and airplane-mode rehearsals remain unverified; the latency target is not met.
 
 The direct instrumentation command leaves the app, models and report installed. `./gradlew :app:connectedDebugAndroidTest` is also available; the Gradle configuration enables `android.injected.androidTest.leaveApksInstalledAfterRun` because default Gradle cleanup removes the app and its external files. Use `adb -s DEVICE_SERIAL` for each device command when more than one phone is attached.
@@ -68,8 +80,9 @@ Also check microphone denial, a silent turn, backgrounding while recording, back
 - `Conversation` owns session transitions and agreement state. Native callbacks carry a revision and cannot revive an ended or corrected session. A failed correction keeps the previous map and its original source transcript, visibly labeled until a new analysis succeeds. Completed agreements survive backgrounding and ordinary follow-up turns; editing a source, changing the proposal or ending the session invalidates them.
 - `GemmaAnalysis` owns the bounded prompt and native generation configuration. `AnalysisCodec` enforces schema shape, source IDs, and speaker ownership. No model-produced graph IDs or agreement flags are accepted.
 - `LocalRuntime` owns engine loading, checksums, warm-up, cancellation and teardown. All blocking work runs off the UI thread.
-- `Microphone` feeds 16 kHz mono Float32 PCM to Xybrid; partials replace the visible transcript because they are cumulative. A simple energy gate skips silence, but does not separate background voices.
+- `Microphone` feeds 16 kHz mono Float32 PCM to Xybrid; partials replace the visible transcript because they are cumulative. A simple energy gate rejects silent turns after capture; audio is still fed to ASR during the turn. It does not separate background voices.
 - `MediatorViewModel` serializes turns through `SessionWork` and controls the timer and chime. Cancellation waits for the actual native operation even after repeated End/background actions; queued ASR audio is aborted separately from normal turn finalization. The map layout is deterministic, with one lane per person and common ground in the center.
+- `TabletopConversation` is the default face-to-face experience: opposing participant panels, explicit active/inactive state, central orb and per-person suggestion confirmations. The original map/transcript interface is available in Debug. `LatencyDiagnostics` retains bounded timing metadata and never retains conversation content.
 
 The POC supports eight English turns of up to 1,000 characters, foreground use, and explicit speaker selection. It has no diarization, background service, speech output, cloud fallback, ADK dependency, database, or user-session export. Concerns remain tentative; each person can inspect their source and correct the transcript.
 
