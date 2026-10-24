@@ -142,12 +142,12 @@ internal class MediatorViewModel(application: Application) : AndroidViewModel(ap
         mutable.update { it.copy(busy = true, status = "Finding the requests and common ground…", error = null, retrySpeaker = null) }
         val startedAt = SystemClock.elapsedRealtime()
         try {
-            val result = runtime.analyze(snapshot.turns)
+            val (result, gemma) = runtime.analyze(snapshot.turns)
             currentCoroutineContext().ensureActive()
             val now = SystemClock.elapsedRealtime()
             val current = mutable.value.conversation
             if (current.revision != snapshot.revision || !current.active || current.recording != null) return
-            val timing = AnalysisTiming.complete(source, snapshot.turns.size, startedAt, now, audio)
+            val timing = AnalysisTiming.complete(source, snapshot.turns.size, startedAt, now, audio, gemma)
             mutable.update {
                 if (it.conversation.revision != snapshot.revision) it else it.copy(
                     conversation = it.conversation.apply(snapshot.revision, result, now),

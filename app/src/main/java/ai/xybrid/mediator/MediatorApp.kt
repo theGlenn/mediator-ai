@@ -293,6 +293,13 @@ private fun DeviceDetails(state: ScreenState) {
                 timing.firstPartialMillis?.let { Text("First words after capture starts: ${it / 1000.0}s", style = MaterialTheme.typography.bodySmall) }
                 timing.captureMillis?.let { Text("Audio captured: ${it / 1000.0}s", style = MaterialTheme.typography.bodySmall) }
                 timing.finalTranscriptMillis?.let { Text("ASR after Done: ${it / 1000.0}s", style = MaterialTheme.typography.bodySmall) }
+                timing.gemma?.let { gemma -> Text(buildString {
+                    append("Gemma setup ${gemma.setupMillis / 1000.0}s · generation ${gemma.generateMillis / 1000.0}s")
+                    gemma.prefillTokens?.let { append(" · $it prompt tokens") }
+                    gemma.timeToFirstTokenMillis?.let { append(" · first token ${it / 1000.0}s") }
+                    gemma.decodeTokens?.let { append(" · $it output tokens") }
+                    gemma.decodeTokensPerSecond?.let { append(" at %.1f tok/s".format(java.util.Locale.ROOT, it)) }
+                }, style = MaterialTheme.typography.bodySmall) }
             }
             if (state.diagnostics.isNotEmpty()) {
                 Text("THIS SESSION · COMPLETED ANALYSES", Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelSmall)
@@ -301,6 +308,7 @@ private fun DeviceDetails(state: ScreenState) {
                         append("${index + 1}. ${timing.source.name.lowercase()} · ${timing.turnCount} turns · Gemma ${timing.analysisMillis / 1000.0}s")
                         timing.finalTranscriptMillis?.let { append(" · ASR finish ${it / 1000.0}s") }
                         timing.endToMapMillis?.let { append(" · end to map ${it / 1000.0}s") }
+                        timing.gemma?.decodeTokens?.let { append(" · $it output tokens") }
                     }, style = MaterialTheme.typography.bodySmall)
                 }
             }

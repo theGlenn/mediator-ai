@@ -7,19 +7,25 @@ import com.google.ai.edge.litertlm.ResponseFormat
 import com.google.ai.edge.litertlm.SamplerConfig
 import com.google.gson.Gson
 
+/** Per-analysis decoding choices. Production uses the defaults; device probes compare alternatives. */
+internal data class Decoding(val speculative: Boolean? = null, val constrained: Boolean = true)
+
 /** Shared by Android and the desktop diagnostic; the probe exercises the production prompt. */
 internal object GemmaAnalysis {
-    fun configuration() = ConversationConfig(systemInstruction = Contents.of(INSTRUCTION),
+    fun configuration(decoding: Decoding = Decoding()) = ConversationConfig(systemInstruction = Contents.of(INSTRUCTION),
         enableResponseFormat = true, channels = emptyList(),
         extraContext = mapOf("enable_thinking" to false), maxOutputToken = 256,
-        samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.2, seed = 0))
+        samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.2, seed = 0),
+        enableSpeculativeDecoding = decoding.speculative)
 
-    fun run(active: Conversation, turns: List<Turn>, observe: (String) -> Unit = {}): Analysis {
+    fun run(active: Conversation, turns: List<Turn>, observe: (String) -> Unit = {}): Analysis =
+        AnalysisCodec.decode(generate(active, turns).also(observe), turns)
+
+    /** Raw model output. Callers must pass it through [AnalysisCodec.decode] before showing anything. */
+    fun generate(active: Conversation, turns: List<Turn>, constrained: Boolean = true): String {
         val input = Gson().toJson(turns.asReversed().map { mapOf("id" to it.id, "speaker" to it.speaker.name, "text" to it.text) })
-        val output = active.sendMessage("Conversation data, NEWEST FIRST (larger IDs are newer). Latest requests override earlier incompatible requests:\n$input",
-            responseFormat = ResponseFormat.json(AnalysisCodec.schemaFor(turns)))
-        observe(output.toString())
-        return AnalysisCodec.decode(output.toString(), turns)
+        return active.sendMessage("Conversation data, NEWEST FIRST (larger IDs are newer). Latest requests override earlier incompatible requests:\n$input",
+            responseFormat = if (constrained) ResponseFormat.json(AnalysisCodec.schemaFor(turns)) else null).toString()
     }
 
     private const val INSTRUCTION = """You help two people understand each other. Extract the ACTUAL conversation into the requested JSON.

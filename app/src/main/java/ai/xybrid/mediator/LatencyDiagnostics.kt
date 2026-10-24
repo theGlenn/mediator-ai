@@ -31,6 +31,27 @@ internal class AudioTimingTracker {
     }
 }
 
+/**
+ * Phase split for one Gemma analysis. Setup and generation are wall-clock; token counts and rates come
+ * from LiteRT-LM's benchmark counters and are null when the runtime does not report them.
+ */
+internal data class GemmaMetrics(
+    val setupMillis: Long,
+    val generateMillis: Long,
+    val prefillTokens: Int? = null,
+    val decodeTokens: Int? = null,
+    val timeToFirstTokenMillis: Long? = null,
+    val prefillTokensPerSecond: Double? = null,
+    val decodeTokensPerSecond: Double? = null,
+) {
+    fun logMetadata() = "setupMs=$setupMillis generateMs=$generateMillis " +
+        "prefillTokens=${prefillTokens ?: "na"} decodeTokens=${decodeTokens ?: "na"} " +
+        "ttftMs=${timeToFirstTokenMillis ?: "na"} prefillTps=${prefillTokensPerSecond.rate()} " +
+        "decodeTps=${decodeTokensPerSecond.rate()}"
+
+    private fun Double?.rate() = this?.let { String.format(java.util.Locale.ROOT, "%.1f", it) } ?: "na"
+}
+
 internal enum class AnalysisSource { RECORDED, TYPED, EDIT, RETRY }
 
 internal data class AnalysisTiming(
@@ -41,21 +62,22 @@ internal data class AnalysisTiming(
     val finalTranscriptMillis: Long?,
     val analysisMillis: Long,
     val endToMapMillis: Long?,
+    val gemma: GemmaMetrics? = null,
 ) {
     fun appendTo(history: List<AnalysisTiming>) = (history + this).takeLast(20)
 
     fun logMetadata() = "source=${source.name.lowercase()} turns=$turnCount " +
         "firstPartialMs=${firstPartialMillis ?: "na"} captureMs=${captureMillis ?: "na"} " +
         "finalTranscriptMs=${finalTranscriptMillis ?: "na"} analysisMs=$analysisMillis " +
-        "endToMapMs=${endToMapMillis ?: "na"}"
+        "endToMapMs=${endToMapMillis ?: "na"}" + (gemma?.let { " " + it.logMetadata() } ?: "")
 
     companion object {
         fun complete(source: AnalysisSource, turnCount: Int, startedAt: Long, completedAt: Long,
-            audio: AudioTiming? = null): AnalysisTiming {
+            audio: AudioTiming? = null, gemma: GemmaMetrics? = null): AnalysisTiming {
             val recorded = audio.takeIf { source == AnalysisSource.RECORDED }
             return AnalysisTiming(source, turnCount, recorded?.firstPartialMillis, recorded?.captureMillis,
                 recorded?.finalTranscriptMillis, completedAt - startedAt,
-                recorded?.let { completedAt - it.audioEndedAtMillis })
+                recorded?.let { completedAt - it.audioEndedAtMillis }, gemma)
         }
     }
 }

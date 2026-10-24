@@ -65,4 +65,15 @@ class LatencyDiagnosticsTest {
             "analysisMs=200 endToMapMs=na",
             AnalysisTiming.complete(AnalysisSource.TYPED, 1, 10, 210).logMetadata())
     }
+
+    @Test fun gemmaPhaseSplitAppendsCountsAndRatesOnly() {
+        val counted = GemmaMetrics(40, 900, prefillTokens = 1500, decodeTokens = 120,
+            timeToFirstTokenMillis = 450, prefillTokensPerSecond = 3333.33, decodeTokensPerSecond = 26.66)
+        assertEquals("source=typed turns=2 firstPartialMs=na captureMs=na finalTranscriptMs=na " +
+            "analysisMs=1000 endToMapMs=na setupMs=40 generateMs=900 prefillTokens=1500 decodeTokens=120 " +
+            "ttftMs=450 prefillTps=3333.3 decodeTps=26.7",
+            AnalysisTiming.complete(AnalysisSource.TYPED, 2, 0, 1000, gemma = counted).logMetadata())
+        assertEquals("setupMs=40 generateMs=900 prefillTokens=na decodeTokens=na ttftMs=na prefillTps=na decodeTps=na",
+            GemmaMetrics(40, 900).logMetadata())
+    }
 }

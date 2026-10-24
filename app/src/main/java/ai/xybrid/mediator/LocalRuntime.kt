@@ -1,6 +1,7 @@
 package ai.xybrid.mediator
 
 import android.content.Context
+import android.os.SystemClock
 import ai.xybrid.Xybrid
 import ai.xybrid.XybridModel
 import ai.xybrid.XybridModelLoader
@@ -10,6 +11,8 @@ import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.ExperimentalApi
+import com.google.ai.edge.litertlm.ExperimentalFlags
 import com.google.ai.edge.litertlm.ResponseFormat
 import com.google.gson.JsonParser
 import java.io.File
@@ -21,8 +24,15 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-/** Owns the two native runtimes. All initialization/inference/teardown runs off the UI thread. */
-internal class LocalRuntime(private val context: Context) {
+internal data class TimedAnalysis(val analysis: Analysis, val gemma: GemmaMetrics)
+internal data class Generation(val raw: String, val gemma: GemmaMetrics)
+
+/**
+ * Owns the two native runtimes. All initialization/inference/teardown runs off the UI thread.
+ * [maxNumTokens] sizes Gemma's KV cache; [decoding] applies to every analysis unless a probe overrides it.
+ */
+internal class LocalRuntime(private val context: Context, private val maxNumTokens: Int = 8192,
+    private val decoding: Decoding = Decoding()) {
     private val mutex = Mutex()
     private var engine: Engine? = null
     var speechModel: XybridModel? = null
@@ -69,9 +79,12 @@ internal class LocalRuntime(private val context: Context) {
         }
     }
 
+    @OptIn(ExperimentalApi::class)
     private fun openEngine(model: File, backend: Backend): Engine {
+        // Records per-turn prefill/decode counters; prompts and outputs are unchanged.
+        ExperimentalFlags.enableBenchmark = true
         val candidate = Engine(EngineConfig(model.absolutePath, backend,
-            maxNumTokens = 8192, cacheDir = context.cacheDir.absolutePath))
+            maxNumTokens = maxNumTokens, cacheDir = context.cacheDir.absolutePath))
         try {
             candidate.initialize()
             candidate.createConversation(ConversationConfig(enableResponseFormat = true,
@@ -88,21 +101,38 @@ internal class LocalRuntime(private val context: Context) {
         }
     }
 
-    suspend fun analyze(turns: List<Turn>): Analysis = withContext(Dispatchers.IO) {
+    suspend fun analyze(turns: List<Turn>): TimedAnalysis {
+        val generated = generate(turns)
+        return TimedAnalysis(AnalysisCodec.decode(generated.raw, turns), generated.gemma)
+    }
+
+    /** Unvalidated output for [analyze] and device probes; never display it without decoding. */
+    suspend fun generate(turns: List<Turn>, decoding: Decoding = this.decoding): Generation = withContext(Dispatchers.IO) {
         mutex.withLock {
             currentCoroutineContext().ensureActive()
             require(turns.isNotEmpty() && turns.size <= 8)
-            val active = requireNotNull(engine) { "Load models before starting." }.createConversation(GemmaAnalysis.configuration())
+            val setupStart = SystemClock.elapsedRealtime()
+            val active = requireNotNull(engine) { "Load models before starting." }.createConversation(GemmaAnalysis.configuration(decoding))
             synchronized(generationLock) { generation = active }
             try {
                 currentCoroutineContext().ensureActive()
-                val result = GemmaAnalysis.run(active, turns)
+                val generateStart = SystemClock.elapsedRealtime()
+                val raw = GemmaAnalysis.generate(active, turns, decoding.constrained)
+                val metrics = metrics(active, generateStart - setupStart, SystemClock.elapsedRealtime() - generateStart)
                 currentCoroutineContext().ensureActive()
-                result
+                Generation(raw, metrics)
             } finally {
                 synchronized(generationLock) { generation = null; active.close() }
             }
         }
+    }
+
+    @OptIn(ExperimentalApi::class)
+    private fun metrics(active: com.google.ai.edge.litertlm.Conversation, setup: Long, generate: Long): GemmaMetrics {
+        // Counters are diagnostic only; a runtime that cannot report them must not fail the analysis.
+        val info = runCatching { active.getBenchmarkInfo() }.getOrNull() ?: return GemmaMetrics(setup, generate)
+        return GemmaMetrics(setup, generate, info.lastPrefillTokenCount, info.lastDecodeTokenCount,
+            (info.timeToFirstTokenInSecond * 1000).toLong(), info.lastPrefillTokensPerSecond, info.lastDecodeTokensPerSecond)
     }
 
     fun cancelGeneration() {

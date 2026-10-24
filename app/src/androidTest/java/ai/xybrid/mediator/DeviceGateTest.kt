@@ -21,7 +21,7 @@ class DeviceGateTest {
         try {
             runtime.initialize { }
             assertNotNull(runtime.speechModel)
-            val first = runtime.analyze(listOf(Turn(1, Speaker.A, "I need updates to plan delivery.")))
+            val first = runtime.analyze(listOf(Turn(1, Speaker.A, "I need updates to plan delivery."))).analysis
             assertNotNull(first.views.single { it.speaker == Speaker.A }.request)
             assertNull(first.views.single { it.speaker == Speaker.B }.request)
             assertNull(first.intervention)
@@ -35,7 +35,7 @@ class DeviceGateTest {
                 }
                 val start = SystemClock.elapsedRealtime()
                 try {
-                    val result = runtime.analyze(turns)
+                    val (result, gemma) = runtime.analyze(turns)
                     check(result.views.all { it.request != null }) { "Explicit requests were left empty in a test dialogue." }
                     check(result.intervention != null) { "An unresolved test dialogue did not produce a question." }
                     if (example["id"].asString == "correction") {
@@ -45,7 +45,7 @@ class DeviceGateTest {
                         check(result.views.all { it.concern == null } && result.commonGround == null) { "Unstated reasons and shared goals must stay absent." }
                     }
                     reports += mapOf("id" to example["id"].asString, "backend" to runtime.backendLabel,
-                        "analysisMs" to SystemClock.elapsedRealtime() - start,
+                        "analysisMs" to SystemClock.elapsedRealtime() - start, "gemma" to gemma,
                         "analysis" to result, "review" to example["review"].asString,
                         "humanUseful" to null)
                 } catch (error: Exception) {
