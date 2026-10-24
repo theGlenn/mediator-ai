@@ -13,20 +13,21 @@ Source and commands: [the app README](../README.md).
 - Unit tests, packaged-manifest check, ten synthetic evaluation dialogues, a real-model desktop probe, and a real-runtime Android instrumentation gate.
 - Tabletop follow-up: opposing participant panels with the upper half rotated 180°, a central suggestion orb, and one confirmation control per participant. The original graph, transcript, corrections, manual entry and device checks are available in **Debug**. Suggestions remain optional, with the existing chime/cooldown policy and no speech output.
 - Bounded live timing diagnostics: first nonblank partial, capture duration, ASR finalization, Gemma analysis and audio end to map application. Debug shows up to 20 completed analyses; `MediatorPerf` logcat entries contain only counts/timings. No transcript or audio persistence was added.
+- Latency follow-up: Whisper encoder context 500 frames; compact Gemma output with implied citations, no whitespace and label guards; background conversation prefetch; LiteRT-LM benchmark counters in diagnostics; an explicit `LatencyProbeTest` instrumentation class. See [Latency investigation](#latency-investigation).
 
 ## Validation record
 
 | Check | Evidence / status |
 |---|---|
 | Android APK build | `:app:assembleDebug` succeeds with both native runtimes packaged; no duplicate native library conflict. |
-| Unit tests | **27 host tests pass:** the original 21 session/codec/cancellation checks plus six timing tests. The original Mac/native validation below predates the tabletop follow-up. |
+| Unit tests | **31 host tests pass:** session, codec (including the compact wire format), cancellation and timing checks. |
 | Android lint | `:app:lintDebug` passes; version/target-ABI notices are not device results. |
 | Offline APK manifest | Packaged permission inspection confirms microphone permission and no `INTERNET` or `ACCESS_NETWORK_STATE`. |
 | Model provisioning | Both pinned weight downloads verified on the VM and Mac, then staged over USB. Gemma on Mac: `<mac build dir>/mediator-android/models/gemma-4-E2B-it.litertlm`. |
 | Real Gemma quality | **10/10 automatic checks pass** with real Gemma on VM CPU: requests, question, source ownership, one-speaker suppression, corrected request evidence and absent unknown concerns. [Full synthetic report](mediator-host-evaluation.json). Human semantic/usefulness review remains open. |
 | Mac build / USB install | **Passed** on Apple Silicon with Corretto 21.0.13 and Android SDK 36. `assembleDebug`, 21 unit tests, lint and instrumentation APK build passed in 6m31s on the first build. Offline manifest verified; APK installed and launched on CPH2655, Android 16 / API 36. |
 | OnePlus native runtime gate | **Passed:** Whisper warm-up and all ten real Gemma automatic cases in the same Android process. Final retained run: 1 instrumentation test / 0 failures (129.024 s total), **Gemma GPU**. [Synthetic device report](mediator-device-evaluation.json). App and models remain installed; live microphone use remains untested. |
-| Phone analysis latency | **9.14–12.37 s**, median **10.76 s**, across ten synthetic dialogues on Gemma GPU. Only 1/10 is within ten seconds. Five-second target not met; audio-end-to-card and live rehearsal latency remain unmeasured. |
+| Phone analysis latency | **4.02–6.46 s**, median **4.91 s**, across ten synthetic dialogues on Gemma GPU after the latency follow-up; **10/10 automatic checks pass** and 6/10 are within five seconds ([gate report](mediator-latency/device-gate.json)). Original POC: 9.14–12.37 s, median 10.76 s. Live audio-end-to-card and rehearsal latency remain unmeasured. |
 | Human quality review | **Pending.** Review all ten synthetic dialogues; require at least 8 useful questions and correct attribution throughout. |
 | Live demo rehearsals | **Pending.** Three consecutive four-turn sessions in airplane mode, with results within ten seconds of finalized input. |
 
@@ -61,18 +62,43 @@ The native compatibility gate is clear. Latency needs improvement or an explicit
 
 The tester reports that live speech and the growing conversation map work well. This is qualitative feedback, without a recorded latency or usefulness score. The live round was not saved: the installed original POC had no per-turn timing logger or conversation persistence. A read-only check found only the synthetic evaluation report on disk, and the retained app logcat snapshot yielded lifecycle messages rather than inference measurements. Updating/restarting the original app would lose its in-memory round.
 
-The tabletop follow-up passes host APK/instrumentation builds, 27 unit tests, Android lint and the packaged offline-manifest check. It still needs a phone UI rehearsal; these checks do not establish faster inference or on-device layout quality. Switching between tabletop and Debug uses the same session and does not reload the models.
+The tabletop follow-up passes host APK/instrumentation builds, 27 unit tests, Android lint and the packaged offline-manifest check. It is now installed on the OnePlus together with the latency follow-up, but the tabletop UI has not been rehearsed on the phone; these checks do not establish on-device layout quality. Switching between tabletop and Debug uses the same session and does not reload the models.
 
-The pinned libraries expose two distinct latency paths:
+## Latency investigation
 
-| Stage | Current configuration | Next controlled probe |
-|---|---|---|
-| Speech | Whisper Tiny English Q5_1, **whisper.cpp CPU / four threads**, 16 kHz mono. Streaming uses five-second windows with a half-second overlap and early passes at 1.5 and 3 seconds. VAD is off. `audio_ctx: 0` selects the full 1,500-frame / 30-second encoder context. | Compare the existing baseline with `defaultStreamingConfig().copy(audioCtx = 500u)` in warm-up and capture. This covers ten seconds of encoder context for five-second windows. Measure finalization and word retention on the OnePlus, including pauses, quiet speech, long turns and mid-word stops. No speedup is established yet. |
-| Analysis | Gemma GPU, thinking already disabled, a fresh conversation and full prompt per analysis, constrained JSON with a 256-token maximum. The existing 9.14–12.37-second measurements exclude ASR. | Enable LiteRT-LM benchmark data in an isolated follow-up and record prefill/decode counts and rates before changing prompt/output length. Preserve evidence, correction and unknown-concern quality checks. |
+Measured 2026-10-24 on the OnePlus CPH2655 (Android 16) through instrumentation, which runs the app process in Android's `foreground` scheduling group, not as the visible `top-app`. All inputs are synthetic; raw reports are in [`mediator-latency/`](mediator-latency/).
 
-The Kotlin 0.13.1 streaming config exposes `audioCtx`, language, sample rate and VAD, but no chunk-size or thread setter. Static inspection of its pinned core also found that this feed/flush route does not use VAD segmentation; adding a Silero model is not an evidenced speed improvement here. The app's RMS gate rejects silent turns after capture; it feeds silence to ASR during recording. Normal `flush()` drains queued audio and final-tail inference, so speech finalization and Gemma time must be measured separately.
+**Speech.** Six macOS-TTS clips (3.4–20.8 s) were streamed at microphone pace through Whisper Tiny English ([report](mediator-latency/asr-audio-context.json)):
 
-Sources: [Xybrid v0.13.1 streaming window selection](https://github.com/xybrid-ai/xybrid/blob/v0.13.1/crates/xybrid-core/src/streaming/session.rs#L539), [Whisper context guidance](https://github.com/xybrid-ai/xybrid/blob/v0.13.1/crates/xybrid-whisper/src/params.rs), [Kotlin streaming configuration](https://github.com/xybrid-ai/xybrid/blob/v0.13.1/bindings/kotlin/src/main/kotlin/ai/xybrid/Xybrid.kt#L537), [LiteRT-LM 0.18.0 benchmark metrics](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/kotlin/java/com/google/ai/edge/litertlm/Conversation.kt#L674).
+| Encoder context | Done → final text | Partial arrival after its audio | Total compute / audio |
+|---|---|---|---|
+| 1,500 frames (previous default) | 485–678 ms | 567–671 ms | 0.23–0.57× |
+| **500 frames (now bundled)** | **193–212 ms** | **221–362 ms** | **0.07–0.15×** |
+
+Word error rate was equal or lower at 500 frames on every clip. On the 20-second clip it was 1.4% vs 5.6%, because the full context duplicated a phrase. Both settings misheard "four would" as "forward" in one clip. There were no repetition loops. The SDK's partial cadence (1.5, 3 and 5 s, then every 4.5 s) is fixed in Xybrid 0.13.1 and has no Kotlin setter; with a 10-second context, a five-second window costs about 150–200 ms here, so a shorter SDK cadence looks affordable. The Kotlin config exposes `audioCtx`, language, sample rate and VAD, but no chunk-size or thread setter. Static inspection of the pinned core found that this feed/flush route does not use VAD segmentation, so adding a Silero model is not an evidenced speedup.
+
+**Gemma.** Each variant ran on a fresh engine over the ten dialogues ([report](mediator-latency/gemma-variants.json)). The original production configuration spent 1.26–1.39 s creating the conversation, about 0.53 s to the first token (~920 prompt tokens), then decoded 122–175 tokens at only **15.7–16.2 tok/s**.
+
+| Variant (GPU unless noted) | Result |
+|---|---|
+| KV cache 4,096 instead of 8,192 | First token 0.1 s sooner; decode unchanged. Not adopted, to keep headroom for eight long turns. |
+| No JSON constraint | 42.3–42.9 tok/s, but **0/10 valid**: early stops, wrong evidence shapes, unbalanced braces. |
+| Speculative decoding (MTP) | Unconstrained 64.5–80.8 tok/s, 0/10 valid. With the constraint, garbled text or native `compute_mask() called after stop` errors. Requesting it once also left the drafter active for later conversations on that engine ([confounded run](mediator-latency/gemma-shared-engine-confounded.json)). Not usable with LiteRT-LM 0.18. |
+| Prefill system prompt at conversation creation | First token unchanged (~0.37 s with 80 vs 920 prompt tokens); prefill is not the bottleneck. |
+| CPU, four threads ([report](mediator-latency/gemma-cpu.json)) | Prefill 76–135 tok/s (7–12 s to first token); decode 11–17 tok/s, constrained and unconstrained alike, so the llguidance mask itself is cheap. 17–27 s per analysis. |
+
+The constraint's cost is structural. For GPU logits, LiteRT-LM's `ConstrainedDecoder::ProcessLogits` copies the full-vocabulary logits to the CPU, masks them, and writes them back for every token: about 39 ms per token. About 70% of output tokens were JSON structure forced by the schema (`{"t":`, `"e":{"A":1,"B":2}`, newlines). The adopted changes remove those tokens rather than the constraint:
+
+- Implied citations: plain claim text while each speaker has one turn; once anyone has several, every A/B claim is `{"t":…,"e":turn}`. A mixed format let E2B write a citation object inside a string on the host check, so the format is now uniform per output and labels cannot contain quotes or braces.
+- Shared claims are plain text, cited by each speaker's own claim turn.
+- `x-guidance: whitespace_flexible=false` removes the 10–17 newline tokens the grammar allowed.
+- The next conversation is created in the background after each analysis, removing 1.3–2.5 s of setup from the result path.
+
+Result through the production path ([gate report](mediator-latency/device-gate.json)): **52–91 output tokens, ~763 prompt tokens, no setup on the result path, 4.02–6.46 s per analysis (median 4.91 s), 10/10 automatic checks**. Decode is 14.3–15.3 tok/s. A recorded turn's measured path is now roughly 0.2 s of ASR finalization plus ~5 s of Gemma, against roughly 0.5 s plus ~11 s before. Live end-to-card timings still need a rehearsal.
+
+Quality notes for the human review: the corrected request cites turn 3, unknown concerns stay empty, and no shared topic is labelled as common ground. Some questions still ask which need matters more ("What is the priority between…"), and one proposal leaked a speaker letter ("A: Propose a few alternative times"). The host check of the same prompt passes 10/10.
+
+Sources: [Xybrid v0.13.1 streaming window selection](https://github.com/xybrid-ai/xybrid/blob/v0.13.1/crates/xybrid-core/src/streaming/session.rs#L539), [Whisper context guidance](https://github.com/xybrid-ai/xybrid/blob/v0.13.1/crates/xybrid-whisper/src/params.rs), [LiteRT-LM 0.18.0 constrained decoder](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/runtime/components/constrained_decoding/constrained_decoder.cc), [LiteRT-LM 0.18.0 benchmark metrics](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/kotlin/java/com/google/ai/edge/litertlm/Conversation.kt#L674), [Gemma 4 E2B model card benchmarks](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm).
 
 ## Sources
 

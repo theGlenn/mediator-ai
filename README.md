@@ -49,13 +49,18 @@ python3 scripts/verify_apk.py
 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb shell am instrument -w -r -e class ai.xybrid.mediator.DeviceGateTest ai.xybrid.mediator.test/androidx.test.runner.AndroidJUnitRunner
 adb pull /sdcard/Android/data/ai.xybrid.mediator/files/evaluation-report.json
+# Latency probes (synthetic only). ASR needs 16 kHz mono PCM16 clips, optionally with .txt transcripts:
+#   say -o clip.wav --file-format=WAVE --data-format=LEI16@16000 "…"   (macOS)
+#   adb shell mkdir -p /sdcard/Android/data/ai.xybrid.mediator/files/asr-probe   # then chmod 2777 and push
+adb shell am instrument -w -r -e class 'ai.xybrid.mediator.LatencyProbeTest#asrAudioContext' ai.xybrid.mediator.test/androidx.test.runner.AndroidJUnitRunner
+adb shell am instrument -w -r -e class 'ai.xybrid.mediator.LatencyProbeTest#gemmaVariants' ai.xybrid.mediator.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-Unit tests cover evidence ownership, unknown sources, malformed output, session revisions, corrections, the eight-turn limit, chime suppression/cooldown, two distinct confirmations, and repeated cancellation while native cleanup is still draining. `verify_apk.py` inspects the packaged manifest, including dependency contributions, and fails if network permissions appear.
+Unit tests cover evidence ownership, implied and explicit citations, one claim form per output, unknown sources, malformed output, session revisions, corrections, the eight-turn limit, chime suppression/cooldown, two distinct confirmations, and repeated cancellation while native cleanup is still draining. `verify_apk.py` inspects the packaged manifest, including dependency contributions, and fails if network permissions appear.
 
 ### Live timing diagnostics
 
-**Debug → Device check** shows timings for the latest successful analysis and a history of up to 20 completed analyses in this session. Recorded turns separate time to the first nonblank partial (from capture start, including any initial silence), capture duration, ASR finalization after **Done**, Gemma analysis, and audio end to the map being applied. The last measure includes ASR cleanup and analysis, but does not measure display rendering. Typed turns, edits and retries have only an analysis duration. Session start/end clear this in-memory history.
+**Debug → Device check** shows timings for the latest successful analysis and a history of up to 20 completed analyses in this session. Recorded turns separate time to the first nonblank partial (from capture start, including any initial silence), capture duration, ASR finalization after **Done**, Gemma analysis, and audio end to the map being applied. Gemma analysis is further split into conversation setup, generation, prompt/output token counts, time to first token and decode rate, from LiteRT-LM's benchmark counters. The last measure includes ASR cleanup and analysis, but does not measure display rendering. Typed turns, edits and retries have only an analysis duration. Session start/end clear this in-memory history.
 
 Successful analyses also emit timing/count metadata to Android logcat, with no transcript, names, quotes, prompts or audio:
 
@@ -65,7 +70,7 @@ adb logcat -d -v time -s MediatorPerf:I '*:S'
 
 No live timing log existed in the original POC, so these samples start after installing the tabletop follow-up. The live round reported by the tester had no saved transcript or per-turn timings; its retained Android logs did not yield inference measurements. `evaluation-report.json` remains synthetic-only. A new timing sample is emitted only after a successful current-session analysis; silence, cancelled work and failures do not produce completed samples.
 
-The [host run](docs/mediator-host-evaluation.json) and [OnePlus run](docs/mediator-device-evaluation.json) each pass ten automatic cases. On OnePlus CPH2655 / Android 16, Gemma uses GPU and analysis takes 9.14–12.37 seconds (median 10.76 seconds), exceeding ten seconds in 9/10 cases. The [handoff](docs/mediator-poc.md) records the native gate and remaining semantic findings. Live microphone behavior, human usefulness and airplane-mode rehearsals remain unverified; the latency target is not met.
+The [current OnePlus gate](docs/mediator-latency/device-gate.json) passes all ten automatic cases on Gemma GPU in **4.02–6.46 seconds (median 4.91 seconds)**, 6/10 within five seconds. The original POC took 9.14–12.37 seconds ([original OnePlus run](docs/mediator-device-evaluation.json), [host run](docs/mediator-host-evaluation.json)). Whisper finalization after **Done** dropped from about 0.5 to 0.2 seconds. The [handoff](docs/mediator-poc.md#latency-investigation) records what was measured and rejected. Instrumentation does not exercise the microphone or a visible app; live rehearsal timings, human usefulness and airplane-mode rehearsals remain unverified.
 
 The direct instrumentation command leaves the app, models and report installed. `./gradlew :app:connectedDebugAndroidTest` is also available; the Gradle configuration enables `android.injected.androidTest.leaveApksInstalledAfterRun` because default Gradle cleanup removes the app and its external files. Use `adb -s DEVICE_SERIAL` for each device command when more than one phone is attached.
 
@@ -78,9 +83,9 @@ Also check microphone denial, a silent turn, backgrounding while recording, back
 ## Structure and limits
 
 - `Conversation` owns session transitions and agreement state. Native callbacks carry a revision and cannot revive an ended or corrected session. A failed correction keeps the previous map and its original source transcript, visibly labeled until a new analysis succeeds. Completed agreements survive backgrounding and ordinary follow-up turns; editing a source, changing the proposal or ending the session invalidates them.
-- `GemmaAnalysis` owns the bounded prompt and native generation configuration. `AnalysisCodec` enforces schema shape, source IDs, and speaker ownership. No model-produced graph IDs or agreement flags are accepted.
-- `LocalRuntime` owns engine loading, checksums, warm-up, cancellation and teardown. All blocking work runs off the UI thread.
-- `Microphone` feeds 16 kHz mono Float32 PCM to Xybrid; partials replace the visible transcript because they are cumulative. A simple energy gate rejects silent turns after capture; audio is still fed to ASR during the turn. It does not separate background voices.
+- `GemmaAnalysis` owns the bounded prompt and native generation configuration. `AnalysisCodec` enforces schema shape, source IDs, and speaker ownership. No model-produced graph IDs or agreement flags are accepted. Because each constrained token costs a full GPU-to-CPU logits round trip in LiteRT-LM 0.18, the wire format omits citations the app can infer: while each speaker has one turn, claims are plain text; once anyone has several, every A/B claim names one of that speaker's turns. Shared claims cite each speaker's own claim turn. The grammar disallows whitespace and keeps quotes and braces out of labels.
+- `LocalRuntime` owns engine loading, checksums, warm-up, cancellation and teardown. All blocking work runs off the UI thread. It creates the next analysis conversation in the background while people talk; setup otherwise added 1.3–2.5 seconds per analysis.
+- `Microphone` feeds 16 kHz mono Float32 PCM to Xybrid; partials replace the visible transcript because they are cumulative. Whisper uses a 500-frame (10-second) encoder context from the bundled metadata; streaming windows are at most five seconds. The SDK still emits partials at 1.5, 3 and 5 seconds, then every 4.5 seconds; Kotlin 0.13.1 exposes no cadence setting. A simple energy gate rejects silent turns after capture; audio is still fed to ASR during the turn. It does not separate background voices.
 - `MediatorViewModel` serializes turns through `SessionWork` and controls the timer and chime. Cancellation waits for the actual native operation even after repeated End/background actions; queued ASR audio is aborted separately from normal turn finalization. The map layout is deterministic, with one lane per person and common ground in the center.
 - `TabletopConversation` is the default face-to-face experience: opposing participant panels, explicit active/inactive state, central orb and per-person suggestion confirmations. The original map/transcript interface is available in Debug. `LatencyDiagnostics` retains bounded timing metadata and never retains conversation content.
 
