@@ -8,7 +8,8 @@ import com.google.ai.edge.litertlm.SamplerConfig
 import com.google.gson.Gson
 
 /** Per-analysis decoding choices. Production uses the defaults; device probes compare alternatives. */
-internal data class Decoding(val speculative: Boolean? = null, val constrained: Boolean = true)
+internal data class Decoding(val speculative: Boolean? = null, val constrained: Boolean = true,
+    val prefillPreface: Boolean = false)
 
 /** Shared by Android and the desktop diagnostic; the probe exercises the production prompt. */
 internal object GemmaAnalysis {
@@ -16,7 +17,7 @@ internal object GemmaAnalysis {
         enableResponseFormat = true, channels = emptyList(),
         extraContext = mapOf("enable_thinking" to false), maxOutputToken = 256,
         samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.2, seed = 0),
-        enableSpeculativeDecoding = decoding.speculative)
+        prefillPrefaceOnInit = decoding.prefillPreface, enableSpeculativeDecoding = decoding.speculative)
 
     fun run(active: Conversation, turns: List<Turn>, observe: (String) -> Unit = {}): Analysis =
         AnalysisCodec.decode(generate(active, turns).also(observe), turns)

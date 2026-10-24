@@ -33,29 +33,31 @@ class LatencyProbeTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val gson = GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create()
 
-    /** Interleaves conversation-level variants per dialogue so thermal drift affects each one alike. */
+    /**
+     * Each variant gets a fresh engine: in LiteRT-LM 0.18 one speculative conversation leaves the drafter
+     * active for later conversations on the same engine, so variants cannot share one. Speculative
+     * variants run last for the same reason.
+     */
     @Test fun gemmaVariants() = runBlocking {
-        val variants = mapOf(
-            8192 to listOf("baseline" to Decoding(), "speculative" to Decoding(speculative = true),
-                "unconstrained" to Decoding(constrained = false)),
-            4096 to listOf("baseline" to Decoding(), "speculative" to Decoding(speculative = true)))
+        val off = Decoding(speculative = false)
+        val variants = listOf(
+            Triple("constrained", 8192, off),
+            Triple("constrained", 4096, off),
+            Triple("unconstrained", 4096, off.copy(constrained = false)),
+            Triple("unconstrained-preface", 4096, off.copy(constrained = false, prefillPreface = true)),
+            Triple("unconstrained-speculative", 4096, Decoding(speculative = true, constrained = false)),
+            Triple("constrained-speculative", 4096, Decoding(speculative = true)))
         val dialogues = dialogues()
         val rows = mutableListOf<Map<String, Any?>>()
-        for ((tokens, decodings) in variants) {
-            val runtime = LocalRuntime(context, maxNumTokens = tokens)
+        for ((name, tokens, decoding) in variants) {
+            val runtime = LocalRuntime(context, maxNumTokens = tokens, decoding = decoding)
             try {
                 runtime.initialize { }
-                for ((name, decoding) in decodings) {
-                    rows += attempt(runtime, tokens, name, decoding, "warm-up", dialogues.first().second)
-                }
-                dialogues.forEachIndexed { index, (id, turns) ->
-                    val order = decodings.indices.map { decodings[(it + index) % decodings.size] }
-                    for ((name, decoding) in order) rows += attempt(runtime, tokens, name, decoding, id, turns)
-                    write("latency-probe-gemma.json", rows)
-                }
+                rows += attempt(runtime, tokens, name, decoding, "warm-up", dialogues.first().second)
+                for ((id, turns) in dialogues) rows += attempt(runtime, tokens, name, decoding, id, turns)
+                write("latency-probe-gemma.json", rows)
             } finally { runtime.close() }
         }
-        write("latency-probe-gemma.json", rows)
     }
 
     private suspend fun attempt(runtime: LocalRuntime, tokens: Int, name: String, decoding: Decoding,
@@ -67,11 +69,11 @@ class LatencyProbeTest {
             val generated = runtime.generate(turns, decoding)
             row["totalMs"] = SystemClock.elapsedRealtime() - start
             row["gemma"] = generated.gemma
-            row["outputChars"] = generated.raw.length
+            row["raw"] = generated.raw // Synthetic fixture output, kept to diagnose invalid variants.
             row["analysis"] = runCatching { AnalysisCodec.decode(generated.raw, turns) }
                 .onFailure { row["invalid"] = it.cause?.javaClass?.simpleName ?: it.javaClass.simpleName }.getOrNull()
         } catch (error: Exception) {
-            row["error"] = "${error.javaClass.simpleName}: ${error.message?.take(300)}"
+            row["error"] = "${error.javaClass.simpleName}: ${error.message?.take(600)}"
         }
         return row
     }
