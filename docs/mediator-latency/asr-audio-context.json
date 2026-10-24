@@ -1,0 +1,482 @@
+[
+  {
+    "mode": "paced",
+    "audioCtx": 1500,
+    "stopToFinalMs": 543,
+    "captureMs": 3885,
+    "text": "I need a regular update because I\u0027m responsible for delivery.",
+    "partials": [
+      {
+        "atMs": 2077,
+        "audioMs": 1500,
+        "chunk": 1,
+        "text": "I need a regular update because..."
+      },
+      {
+        "atMs": 3594,
+        "audioMs": 3000,
+        "chunk": 2,
+        "text": "I need a regular update because I\u0027m responsible for"
+      }
+    ],
+    "clip": "01-alex-update.wav",
+    "audioMs": 3583,
+    "expected": "I need a regular update because I\u0027m responsible for delivery.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "unpaced",
+    "audioCtx": 1500,
+    "computeMs": 1948,
+    "text": "I need a regular update because I\u0027m responsible for delivery.",
+    "clip": "01-alex-update.wav",
+    "audioMs": 3583,
+    "expected": "I need a regular update because I\u0027m responsible for delivery.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "paced",
+    "audioCtx": 500,
+    "stopToFinalMs": 205,
+    "captureMs": 3884,
+    "text": "I need a regular update because I\u0027m responsible for delivery.",
+    "partials": [
+      {
+        "atMs": 1734,
+        "audioMs": 1500,
+        "chunk": 1,
+        "text": "I need a regular update because"
+      },
+      {
+        "atMs": 3283,
+        "audioMs": 3000,
+        "chunk": 2,
+        "text": "I need a regular update because I\u0027m responsible for"
+      }
+    ],
+    "clip": "01-alex-update.wav",
+    "audioMs": 3583,
+    "expected": "I need a regular update because I\u0027m responsible for delivery.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "unpaced",
+    "audioCtx": 500,
+    "computeMs": 522,
+    "text": "I need a regular update because I\u0027m responsible for delivery.",
+    "clip": "01-alex-update.wav",
+    "audioMs": 3583,
+    "expected": "I need a regular update because I\u0027m responsible for delivery.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "paced",
+    "audioCtx": 500,
+    "stopToFinalMs": 193,
+    "captureMs": 4996,
+    "text": "I want to deliver on time too, constant check-ins break my focus.",
+    "partials": [
+      {
+        "atMs": 1733,
+        "audioMs": 1500,
+        "chunk": 1,
+        "text": "I want to deliver on time."
+      },
+      {
+        "atMs": 3279,
+        "audioMs": 3000,
+        "chunk": 2,
+        "text": "I want to deliver on time too, constant check."
+      }
+    ],
+    "clip": "02-sam-focus.wav",
+    "audioMs": 4695,
+    "expected": "I want to deliver on time too. Constant check-ins break my focus.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "unpaced",
+    "audioCtx": 500,
+    "computeMs": 590,
+    "text": "I want to deliver on time too, constant check-ins break my focus.",
+    "clip": "02-sam-focus.wav",
+    "audioMs": 4695,
+    "expected": "I want to deliver on time too. Constant check-ins break my focus.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "paced",
+    "audioCtx": 1500,
+    "stopToFinalMs": 501,
+    "captureMs": 4997,
+    "text": "I want to deliver on time too. Constant check-ins break my focus.",
+    "partials": [
+      {
+        "atMs": 2090,
+        "audioMs": 1500,
+        "chunk": 1,
+        "text": "I want to deliver on time."
+      },
+      {
+        "atMs": 3594,
+        "audioMs": 3000,
+        "chunk": 2,
+        "text": "I want to deliver on time too. Constant check."
+      }
+    ],
+    "clip": "02-sam-focus.wav",
+    "audioMs": 4695,
+    "expected": "I want to deliver on time too. Constant check-ins break my focus.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "unpaced",
+    "audioCtx": 1500,
+    "computeMs": 2019,
+    "text": "I want to deliver on time too. Constant check-ins break my focus.",
+    "clip": "02-sam-focus.wav",
+    "audioMs": 4695,
+    "expected": "I want to deliver on time too. Constant check-ins break my focus.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "paced",
+    "audioCtx": 1500,
+    "stopToFinalMs": 512,
+    "captureMs": 4546,
+    "text": "I don\u0027t need meetings all day. One reliable update would help me plan.",
+    "partials": [
+      {
+        "atMs": 2081,
+        "audioMs": 1500,
+        "chunk": 1,
+        "text": "I don\u0027t need meetings all day."
+      },
+      {
+        "atMs": 3610,
+        "audioMs": 3000,
+        "chunk": 2,
+        "text": "I don\u0027t need meetings all day. One reliable update."
+      }
+    ],
+    "clip": "03-alex-plan.wav",
+    "audioMs": 4245,
+    "expected": "I don\u0027t need meetings all day. One reliable update would help me plan.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "unpaced",
+    "audioCtx": 1500,
+    "computeMs": 1981,
+    "text": "I don\u0027t need meetings all day. One reliable update would help me plan.",
+    "clip": "03-alex-plan.wav",
+    "audioMs": 4245,
+    "expected": "I don\u0027t need meetings all day. One reliable update would help me plan.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "paced",
+    "audioCtx": 500,
+    "stopToFinalMs": 195,
+    "captureMs": 4546,
+    "text": "I don\u0027t need meetings all day. One reliable update would help me plan.",
+    "partials": [
+      {
+        "atMs": 1738,
+        "audioMs": 1500,
+        "chunk": 1,
+        "text": "I don\u0027t need meetings all day."
+      },
+      {
+        "atMs": 3254,
+        "audioMs": 3000,
+        "chunk": 2,
+        "text": "I don\u0027t need meetings all day. One reliable update."
+      }
+    ],
+    "clip": "03-alex-plan.wav",
+    "audioMs": 4245,
+    "expected": "I don\u0027t need meetings all day. One reliable update would help me plan.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "unpaced",
+    "audioCtx": 500,
+    "computeMs": 632,
+    "text": "I don\u0027t need meetings all day. One reliable update would help me plan.",
+    "clip": "03-alex-plan.wav",
+    "audioMs": 4245,
+    "expected": "I don\u0027t need meetings all day. One reliable update would help me plan.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "paced",
+    "audioCtx": 500,
+    "stopToFinalMs": 204,
+    "captureMs": 3694,
+    "text": "a short update at forward work better than interruptions.",
+    "partials": [
+      {
+        "atMs": 1725,
+        "audioMs": 1500,
+        "chunk": 1,
+        "text": "a short update at forward word."
+      },
+      {
+        "atMs": 3297,
+        "audioMs": 3000,
+        "chunk": 2,
+        "text": "a short update at forward work better than interruption."
+      }
+    ],
+    "clip": "04-sam-four.wav",
+    "audioMs": 3393,
+    "expected": "A short update at four would work better than interruptions.",
+    "wordErrorRate": 0.2
+  },
+  {
+    "mode": "unpaced",
+    "audioCtx": 500,
+    "computeMs": 506,
+    "text": "a short update at forward work better than interruptions.",
+    "clip": "04-sam-four.wav",
+    "audioMs": 3393,
+    "expected": "A short update at four would work better than interruptions.",
+    "wordErrorRate": 0.2
+  },
+  {
+    "mode": "paced",
+    "audioCtx": 1500,
+    "stopToFinalMs": 678,
+    "captureMs": 3695,
+    "text": "a short update at forward work better than interruptions.",
+    "partials": [
+      {
+        "atMs": 2082,
+        "audioMs": 1500,
+        "chunk": 1,
+        "text": "a short update at forward"
+      },
+      {
+        "atMs": 3593,
+        "audioMs": 3000,
+        "chunk": 2,
+        "text": "a short update at forward work better than interruption."
+      }
+    ],
+    "clip": "04-sam-four.wav",
+    "audioMs": 3393,
+    "expected": "A short update at four would work better than interruptions.",
+    "wordErrorRate": 0.2
+  },
+  {
+    "mode": "unpaced",
+    "audioCtx": 1500,
+    "computeMs": 1943,
+    "text": "a short update at forward work better than interruptions.",
+    "clip": "04-sam-four.wav",
+    "audioMs": 3393,
+    "expected": "A short update at four would work better than interruptions.",
+    "wordErrorRate": 0.2
+  },
+  {
+    "mode": "paced",
+    "audioCtx": 1500,
+    "stopToFinalMs": 485,
+    "captureMs": 21123,
+    "text": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. The problem is that every time someone pings me in the middle of the afternoon.\" It takes me 20 minutes to get back into the code. If we could agree on one rule. on one written update at the end of the day. I think we would both be happier, and you would still know exactly where things stand.",
+    "partials": [
+      {
+        "atMs": 2067,
+        "audioMs": 1500,
+        "chunk": 1,
+        "text": "Look, I understand that."
+      },
+      {
+        "atMs": 3601,
+        "audioMs": 3000,
+        "chunk": 2,
+        "text": "Look, I understand that you need visibility."
+      },
+      {
+        "atMs": 5671,
+        "audioMs": 5000,
+        "chunk": 3,
+        "text": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you."
+      },
+      {
+        "atMs": 10166,
+        "audioMs": 9500,
+        "chunk": 4,
+        "text": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. The problem is that every time someone pings me in the middle of the afternoon.\""
+      },
+      {
+        "atMs": 14627,
+        "audioMs": 14000,
+        "chunk": 5,
+        "text": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. The problem is that every time someone pings me in the middle of the afternoon.\" It takes me 20 minutes to get back into the code. If we could agree on one rule."
+      },
+      {
+        "atMs": 19131,
+        "audioMs": 18500,
+        "chunk": 6,
+        "text": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. The problem is that every time someone pings me in the middle of the afternoon.\" It takes me 20 minutes to get back into the code. If we could agree on one rule. on one written update at the end of the day. I think we would both be happier, and you would"
+      }
+    ],
+    "clip": "05-sam-long.wav",
+    "audioMs": 20822,
+    "expected": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. The problem is that every time someone pings me in the middle of the afternoon, it takes me twenty minutes to get back into the code. If we could agree on one written update at the end of the day, I think we would both be happier, and you would still know exactly where things stand.",
+    "wordErrorRate": 0.05555555555555555
+  },
+  {
+    "mode": "unpaced",
+    "audioCtx": 1500,
+    "computeMs": 4717,
+    "text": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. The problem is that every time someone pings me in the middle of the afternoon.\" It takes me 20 minutes to get back into the code. If we could agree on one rule. on one written update at the end of the day. I think we would both be happier, and you would still know exactly where things stand.",
+    "clip": "05-sam-long.wav",
+    "audioMs": 20822,
+    "expected": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. The problem is that every time someone pings me in the middle of the afternoon, it takes me twenty minutes to get back into the code. If we could agree on one written update at the end of the day, I think we would both be happier, and you would still know exactly where things stand.",
+    "wordErrorRate": 0.05555555555555555
+  },
+  {
+    "mode": "paced",
+    "audioCtx": 500,
+    "stopToFinalMs": 203,
+    "captureMs": 21122,
+    "text": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. the problem is that every time someone pings me in the middle of the afternoon.\" It takes me 20 minutes to get back into the code, if we could agree on one written update at the end of the day. I think we would both be happier, and you would still know exactly where things stand.",
+    "partials": [
+      {
+        "atMs": 1721,
+        "audioMs": 1500,
+        "chunk": 1,
+        "text": "Look, I understand that."
+      },
+      {
+        "atMs": 3256,
+        "audioMs": 3000,
+        "chunk": 2,
+        "text": "Look, I understand that you need visibility."
+      },
+      {
+        "atMs": 5362,
+        "audioMs": 5000,
+        "chunk": 3,
+        "text": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you."
+      },
+      {
+        "atMs": 9850,
+        "audioMs": 9500,
+        "chunk": 4,
+        "text": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. the problem is that every time someone pings me in the middle of the afternoon.\""
+      },
+      {
+        "atMs": 14324,
+        "audioMs": 14000,
+        "chunk": 5,
+        "text": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. the problem is that every time someone pings me in the middle of the afternoon.\" It takes me 20 minutes to get back into the code, if we could agree on one"
+      },
+      {
+        "atMs": 18767,
+        "audioMs": 18500,
+        "chunk": 6,
+        "text": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. the problem is that every time someone pings me in the middle of the afternoon.\" It takes me 20 minutes to get back into the code, if we could agree on one written update at the end of the day. I think we would both be happier, and you would"
+      }
+    ],
+    "clip": "05-sam-long.wav",
+    "audioMs": 20822,
+    "expected": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. The problem is that every time someone pings me in the middle of the afternoon, it takes me twenty minutes to get back into the code. If we could agree on one written update at the end of the day, I think we would both be happier, and you would still know exactly where things stand.",
+    "wordErrorRate": 0.013888888888888888
+  },
+  {
+    "mode": "unpaced",
+    "audioCtx": 500,
+    "computeMs": 1521,
+    "text": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. the problem is that every time someone pings me in the middle of the afternoon.\" It takes me 20 minutes to get back into the code, if we could agree on one written update at the end of the day. I think we would both be happier, and you would still know exactly where things stand.",
+    "clip": "05-sam-long.wav",
+    "audioMs": 20822,
+    "expected": "Look, I understand that you need visibility, and I\u0027m not trying to hide anything from you. The problem is that every time someone pings me in the middle of the afternoon, it takes me twenty minutes to get back into the code. If we could agree on one written update at the end of the day, I think we would both be happier, and you would still know exactly where things stand.",
+    "wordErrorRate": 0.013888888888888888
+  },
+  {
+    "mode": "paced",
+    "audioCtx": 500,
+    "stopToFinalMs": 212,
+    "captureMs": 8395,
+    "text": "Fine. But if something slips on Tuesday I need to hear about it the same day, not on Friday when the client is already asking me questions.",
+    "partials": [
+      {
+        "atMs": 1741,
+        "audioMs": 1500,
+        "chunk": 1,
+        "text": "fine, but if something\u0027s"
+      },
+      {
+        "atMs": 3300,
+        "audioMs": 3000,
+        "chunk": 2,
+        "text": "Fine. But if something slips on Tuesday I need to hear you."
+      },
+      {
+        "atMs": 5338,
+        "audioMs": 5000,
+        "chunk": 3,
+        "text": "Fine. But if something slips on Tuesday I need to hear about it the same day, not on"
+      }
+    ],
+    "clip": "06-alex-medium.wav",
+    "audioMs": 8093,
+    "expected": "Fine, but if something slips on Tuesday I need to hear about it the same day, not on Friday when the client is already asking me questions.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "unpaced",
+    "audioCtx": 500,
+    "computeMs": 797,
+    "text": "Fine. But if something slips on Tuesday I need to hear about it the same day, not on Friday when the client is already asking me questions.",
+    "clip": "06-alex-medium.wav",
+    "audioMs": 8093,
+    "expected": "Fine, but if something slips on Tuesday I need to hear about it the same day, not on Friday when the client is already asking me questions.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "paced",
+    "audioCtx": 1500,
+    "stopToFinalMs": 493,
+    "captureMs": 8395,
+    "text": "Fine. But if something slips on Tuesday I need to hear about it the same day. Not on Friday when the client is already asking me questions.",
+    "partials": [
+      {
+        "atMs": 2079,
+        "audioMs": 1500,
+        "chunk": 1,
+        "text": "Fine. But if something\u0027s..."
+      },
+      {
+        "atMs": 3588,
+        "audioMs": 3000,
+        "chunk": 2,
+        "text": "Fine. But if something slips on Tuesday I need to hear"
+      },
+      {
+        "atMs": 5646,
+        "audioMs": 5000,
+        "chunk": 3,
+        "text": "Fine. But if something slips on Tuesday I need to hear about it the same day. Not on"
+      }
+    ],
+    "clip": "06-alex-medium.wav",
+    "audioMs": 8093,
+    "expected": "Fine, but if something slips on Tuesday I need to hear about it the same day, not on Friday when the client is already asking me questions.",
+    "wordErrorRate": 0.0
+  },
+  {
+    "mode": "unpaced",
+    "audioCtx": 1500,
+    "computeMs": 2666,
+    "text": "Fine. But if something slips on Tuesday I need to hear about it the same day. Not on Friday when the client is already asking me questions.",
+    "clip": "06-alex-medium.wav",
+    "audioMs": 8093,
+    "expected": "Fine, but if something slips on Tuesday I need to hear about it the same day, not on Friday when the client is already asking me questions.",
+    "wordErrorRate": 0.0
+  }
+]

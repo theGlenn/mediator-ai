@@ -1,0 +1,364 @@
+[
+  {
+    "maxNumTokens": 8192,
+    "variant": "baseline",
+    "id": "warm-up",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 12585,
+    "gemma": {
+      "decodeTokens": 164,
+      "decodeTokensPerSecond": 16.077364480218325,
+      "generateMillis": 11215,
+      "prefillTokens": 920,
+      "prefillTokensPerSecond": 1353.8550485379844,
+      "setupMillis": 1369,
+      "timeToFirstTokenMillis": 741
+    },
+    "outputChars": 496,
+    "analysis": {
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Schedule specific, brief updates at times that minimize disruption to your focus."
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What kind of check-ins would help you stay focused while ensuring delivery is on time?"
+        }
+      },
+      "views": [
+        {
+          "concern": {
+            "evidence": [
+              1
+            ],
+            "text": "Responsible for delivery"
+          },
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Daily update"
+          },
+          "speaker": "A"
+        },
+        {
+          "concern": {
+            "evidence": [
+              2
+            ],
+            "text": "Constant check-ins break my focus"
+          },
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Finish on time"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "speculative",
+    "id": "warm-up",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 10758,
+    "gemma": {
+      "decodeTokens": 259,
+      "decodeTokensPerSecond": 28.735300098182204,
+      "generateMillis": 9489,
+      "prefillTokens": 920,
+      "prefillTokensPerSecond": 1964.516149132041,
+      "setupMillis": 1268,
+      "timeToFirstTokenMillis": 503
+    },
+    "outputChars": 272,
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "unconstrained",
+    "id": "warm-up",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 2751,
+    "gemma": {
+      "decodeTokens": 61,
+      "decodeTokensPerSecond": 74.01969409237901,
+      "generateMillis": 1275,
+      "prefillTokens": 920,
+      "prefillTokensPerSecond": 2056.7592906974955,
+      "setupMillis": 1475,
+      "timeToFirstTokenMillis": 460
+    },
+    "outputChars": 203,
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "baseline",
+    "id": "delivery",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 10969,
+    "gemma": {
+      "decodeTokens": 259,
+      "decodeTokensPerSecond": 28.027603410935832,
+      "generateMillis": 9701,
+      "prefillTokens": 920,
+      "prefillTokensPerSecond": 2027.1456662631117,
+      "setupMillis": 1268,
+      "timeToFirstTokenMillis": 489
+    },
+    "outputChars": 272,
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "speculative",
+    "id": "delivery",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 11555,
+    "gemma": {
+      "decodeTokens": 259,
+      "decodeTokensPerSecond": 26.856875659820094,
+      "generateMillis": 10096,
+      "prefillTokens": 920,
+      "prefillTokensPerSecond": 2059.905656858283,
+      "setupMillis": 1458,
+      "timeToFirstTokenMillis": 483
+    },
+    "outputChars": 272,
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "unconstrained",
+    "id": "delivery",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 2579,
+    "gemma": {
+      "decodeTokens": 61,
+      "decodeTokensPerSecond": 75.08037390951787,
+      "generateMillis": 1277,
+      "prefillTokens": 920,
+      "prefillTokensPerSecond": 1995.4138449273676,
+      "setupMillis": 1302,
+      "timeToFirstTokenMillis": 474
+    },
+    "outputChars": 203,
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "speculative",
+    "id": "roommates",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 13387,
+    "gemma": {
+      "decodeTokens": 257,
+      "decodeTokensPerSecond": 22.09781375299411,
+      "generateMillis": 12099,
+      "prefillTokens": 922,
+      "prefillTokensPerSecond": 1997.3259791126452,
+      "setupMillis": 1288,
+      "timeToFirstTokenMillis": 506
+    },
+    "outputChars": 417,
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "unconstrained",
+    "id": "roommates",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 2776,
+    "gemma": {
+      "decodeTokens": 62,
+      "decodeTokensPerSecond": 71.99155843706387,
+      "generateMillis": 1312,
+      "prefillTokens": 922,
+      "prefillTokensPerSecond": 2063.1415198141403,
+      "setupMillis": 1464,
+      "timeToFirstTokenMillis": 460
+    },
+    "outputChars": 205,
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "baseline",
+    "id": "roommates",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 12589,
+    "gemma": {
+      "decodeTokens": 257,
+      "decodeTokensPerSecond": 23.666319068510866,
+      "generateMillis": 11329,
+      "prefillTokens": 922,
+      "prefillTokensPerSecond": 1992.227090482888,
+      "setupMillis": 1260,
+      "timeToFirstTokenMillis": 505
+    },
+    "outputChars": 417,
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "unconstrained",
+    "id": "budget",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 4103,
+    "gemma": {
+      "decodeTokens": 141,
+      "decodeTokensPerSecond": 66.48607470714292,
+      "generateMillis": 2575,
+      "prefillTokens": 919,
+      "prefillTokensPerSecond": 2043.171679561333,
+      "setupMillis": 1528,
+      "timeToFirstTokenMillis": 464
+    },
+    "outputChars": 507,
+    "analysis": {
+      "commonGround": {
+        "evidence": [
+          1,
+          2
+        ],
+        "text": "Equipment quality"
+      },
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Compare the cost vs. quality trade-off for used vs. new equipment"
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What specific aspects of equipment longevity are most important to you both?"
+        }
+      },
+      "views": [
+        {
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Spend no more than five hundred dollars"
+          },
+          "speaker": "A"
+        },
+        {
+          "concern": {
+            "evidence": [
+              2
+            ],
+            "text": "Equipment longevity"
+          },
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Buy used quality equipment rather than cheap new equipment"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "baseline",
+    "id": "budget",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "error": "LiteRtLmJniException: Failed to call nativeSendMessage: UNKNOWN: ERROR: [third_party/odml/litert_lm/runtime/executor/llm_litert_compiled_model_executor.cc:1290]\n└ Failed to compute mask: compute_mask() called after stop\n\u003cstate\u003e\nTokens: ⟦…{\"‧request‧\":{\"‧t‧\"‧\\n‧\\t‧:\"‧The‧▁equipment‧▁has‧Equipment‧▁is‧▁to‧▁last‧▁quality‧▁a"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "speculative",
+    "id": "budget",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "error": "LiteRtLmJniException: Failed to call nativeSendMessage: UNKNOWN: ERROR: [third_party/odml/litert_lm/runtime/executor/llm_litert_compiled_model_executor.cc:1290]\n└ Failed to compute mask: compute_mask() called after stop\n\u003cstate\u003e\nTokens: ⟦…{\"‧request‧\":{\"‧t‧\"‧\\n‧\\t‧:\"‧The‧▁equipment‧▁has‧Equipment‧▁is‧▁to‧▁last‧▁quality‧▁a"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "baseline",
+    "id": "negation",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 10863,
+    "gemma": {
+      "decodeTokens": 259,
+      "decodeTokensPerSecond": 28.839781818632442,
+      "generateMillis": 9447,
+      "prefillTokens": 919,
+      "prefillTokensPerSecond": 1995.4697971782132,
+      "setupMillis": 1413,
+      "timeToFirstTokenMillis": 495
+    },
+    "outputChars": 431,
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "speculative",
+    "id": "negation",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 11023,
+    "gemma": {
+      "decodeTokens": 259,
+      "decodeTokensPerSecond": 28.49097866255287,
+      "generateMillis": 9559,
+      "prefillTokens": 919,
+      "prefillTokensPerSecond": 1986.0659772154966,
+      "setupMillis": 1464,
+      "timeToFirstTokenMillis": 497
+    },
+    "outputChars": 431,
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "unconstrained",
+    "id": "negation",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 4103,
+    "gemma": {
+      "decodeTokens": 141,
+      "decodeTokensPerSecond": 61.192492791452736,
+      "generateMillis": 2756,
+      "prefillTokens": 919,
+      "prefillTokensPerSecond": 2052.849284666238,
+      "setupMillis": 1347,
+      "timeToFirstTokenMillis": 464
+    },
+    "outputChars": 509,
+    "invalid": "JsonSyntaxException"
+  }
+]

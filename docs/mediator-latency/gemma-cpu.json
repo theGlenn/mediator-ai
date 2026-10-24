@@ -1,0 +1,999 @@
+[
+  {
+    "variant": "cpu4-constrained",
+    "id": "initialize",
+    "totalMs": 12157,
+    "backend": "Gemma 4 E2B · CPU · 4 threads"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-constrained",
+    "id": "warm-up",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 18335,
+    "gemma": {
+      "decodeTokens": 157,
+      "decodeTokensPerSecond": 16.902956668733346,
+      "generateMillis": 16151,
+      "prefillTokens": 920,
+      "prefillTokensPerSecond": 134.28349247984016,
+      "setupMillis": 2182,
+      "timeToFirstTokenMillis": 6910
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Daily update\",\"e\":[1]},\"concern\":{\"t\":\"Responsible for delivery\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Finish on time\",\"e\":[2]},\"concern\":{\"t\":\"Constant check-ins break my focus\",\"e\":[2]}},\"common\":{\"t\":\"\",\"e\":{\n\"A\":1,\n\"B\":2\n}},\"question\":{\"t\":\"What is the best frequency for updates that respects both needs?\",\"e\":{\n\"A\":1,\n\"B\":2\n}},\"proposal\":{\"t\":\"Propose a specific update time that minimizes check-ins while ensuring delivery status is covered.\",\"e\":{\n\"A\":1,\n\"B\":2\n}}}",
+    "analysis": {
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Propose a specific update time that minimizes check-ins while ensuring delivery status is covered."
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What is the best frequency for updates that respects both needs?"
+        }
+      },
+      "views": [
+        {
+          "concern": {
+            "evidence": [
+              1
+            ],
+            "text": "Responsible for delivery"
+          },
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Daily update"
+          },
+          "speaker": "A"
+        },
+        {
+          "concern": {
+            "evidence": [
+              2
+            ],
+            "text": "Constant check-ins break my focus"
+          },
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Finish on time"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-constrained",
+    "id": "delivery",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 18928,
+    "gemma": {
+      "decodeTokens": 157,
+      "decodeTokensPerSecond": 17.006434288873866,
+      "generateMillis": 16761,
+      "prefillTokens": 920,
+      "prefillTokensPerSecond": 122.3483494422902,
+      "setupMillis": 2166,
+      "timeToFirstTokenMillis": 7578
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Daily update\",\"e\":[1]},\"concern\":{\"t\":\"Responsible for delivery\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Finish on time\",\"e\":[2]},\"concern\":{\"t\":\"Constant check-ins break my focus\",\"e\":[2]}},\"common\":{\"t\":\"\",\"e\":{\n\"A\":1,\n\"B\":2\n}},\"question\":{\"t\":\"What is the best frequency for updates that respects both needs?\",\"e\":{\n\"A\":1,\n\"B\":2\n}},\"proposal\":{\"t\":\"Propose a specific update time that minimizes check-ins while ensuring delivery status is covered.\",\"e\":{\n\"A\":1,\n\"B\":2\n}}}",
+    "analysis": {
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Propose a specific update time that minimizes check-ins while ensuring delivery status is covered."
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What is the best frequency for updates that respects both needs?"
+        }
+      },
+      "views": [
+        {
+          "concern": {
+            "evidence": [
+              1
+            ],
+            "text": "Responsible for delivery"
+          },
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Daily update"
+          },
+          "speaker": "A"
+        },
+        {
+          "concern": {
+            "evidence": [
+              2
+            ],
+            "text": "Constant check-ins break my focus"
+          },
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Finish on time"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-constrained",
+    "id": "roommates",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.01696663,
+    "totalMs": 24103,
+    "gemma": {
+      "decodeTokens": 256,
+      "decodeTokensPerSecond": 17.330575228971064,
+      "generateMillis": 21932,
+      "prefillTokens": 922,
+      "prefillTokensPerSecond": 128.9440523205311,
+      "setupMillis": 2171,
+      "timeToFirstTokenMillis": 7208
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Need quiet after ten\",\"e\":[1]},\"concern\":{\"t\":\"Work at six in the morning\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Invite friends home sometimes\",\"e\":[2]},\"concern\":{\"t\":\"Feel like my home too\",\"e\":[2]}}\n\n\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n",
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-constrained",
+    "id": "budget",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.053499985,
+    "totalMs": 17426,
+    "gemma": {
+      "decodeTokens": 137,
+      "decodeTokensPerSecond": 17.107637091301843,
+      "generateMillis": 15274,
+      "prefillTokens": 919,
+      "prefillTokensPerSecond": 126.64941655767623,
+      "setupMillis": 2150,
+      "timeToFirstTokenMillis": 7314
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Spend no more than five hundred dollars\",\"e\":[1]},\"concern\":{\"t\":\"Budget constraint\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Buy used quality equipment rather than cheap new equipment\",\"e\":[2]},\"concern\":{\"t\":\"Equipment longevity\",\"e\":[2]}}\n,\n\"common\":{\"t\":\"\",\"e\":{\"A\":1,\"B\":2}},\n\"question\":{\"t\":\"What are your priorities regarding equipment cost and quality?\",\"e\":{\"A\":1,\"B\":2}},\n\"proposal\":{\"t\":\"Discuss the balance between budget and equipment longevity\",\"e\":{\"A\":1,\"B\":2}}}",
+    "analysis": {
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Discuss the balance between budget and equipment longevity"
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What are your priorities regarding equipment cost and quality?"
+        }
+      },
+      "views": [
+        {
+          "concern": {
+            "evidence": [
+              1
+            ],
+            "text": "Budget constraint"
+          },
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Spend no more than five hundred dollars"
+          },
+          "speaker": "A"
+        },
+        {
+          "concern": {
+            "evidence": [
+              2
+            ],
+            "text": "Equipment longevity"
+          },
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Buy used quality equipment rather than cheap new equipment"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-constrained",
+    "id": "negation",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.061466727,
+    "totalMs": 19753,
+    "gemma": {
+      "decodeTokens": 159,
+      "decodeTokensPerSecond": 15.276793173778767,
+      "generateMillis": 17587,
+      "prefillTokens": 919,
+      "prefillTokensPerSecond": 128.18131454096215,
+      "setupMillis": 2165,
+      "timeToFirstTokenMillis": 7234
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Written updates instead of meetings\",\"e\":[1]},\"concern\":{\"t\":\"Do not want more meetings\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"A way to ask questions when a written update is unclear\",\"e\":[2]},\"concern\":{\"t\":\"\",\"e\":[2]}},\"common\":{\"t\":\"\",\"e\":{\n\"A\":1,\n\"B\":2\n}},\"question\":{\"t\":\"What kind of written updates do you need, and what makes them unclear?\",\"e\":{\n\"A\":1,\n\"B\":2\n}},\"proposal\":{\"t\":\"Define the format for written updates and a process for clarifying them\",\"e\":{\n\"A\":1,\n\"B\":2\n}}}",
+    "analysis": {
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Define the format for written updates and a process for clarifying them"
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What kind of written updates do you need, and what makes them unclear?"
+        }
+      },
+      "views": [
+        {
+          "concern": {
+            "evidence": [
+              1
+            ],
+            "text": "Do not want more meetings"
+          },
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Written updates instead of meetings"
+          },
+          "speaker": "A"
+        },
+        {
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "A way to ask questions when a written update is unclear"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-constrained",
+    "id": "correction",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.07023328,
+    "totalMs": 26728,
+    "gemma": {
+      "decodeTokens": 157,
+      "decodeTokensPerSecond": 11.713946366546207,
+      "generateMillis": 24559,
+      "prefillTokens": 944,
+      "prefillTokensPerSecond": 84.69126274535938,
+      "setupMillis": 2169,
+      "timeToFirstTokenMillis": 11231
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Update at four\",\"e\":[3]},\"concern\":{\"t\":\"Need an update\",\"e\":[3]}},\"B\":{\"request\":{\"t\":\"Afternoon update\",\"e\":[2]},\"concern\":{\"t\":\"Focus best in the morning\",\"e\":[2]}}\n,\n\"common\":{\"t\":\"\",\"e\":{\n\"A\":3,\n\"B\":2\n}},\n\"question\":{\"t\":\"What time works best for both of you to receive an update?\",\"e\":{\n\"A\":3,\n\"B\":2\n}},\n\"proposal\":{\"t\":\"Try an update at four to see if it works for both.\",\"e\":{\n\"A\":3,\n\"B\":2\n}}}",
+    "analysis": {
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            3,
+            2
+          ],
+          "text": "Try an update at four to see if it works for both."
+        },
+        "question": {
+          "evidence": [
+            3,
+            2
+          ],
+          "text": "What time works best for both of you to receive an update?"
+        }
+      },
+      "views": [
+        {
+          "concern": {
+            "evidence": [
+              3
+            ],
+            "text": "Need an update"
+          },
+          "request": {
+            "evidence": [
+              3
+            ],
+            "text": "Update at four"
+          },
+          "speaker": "A"
+        },
+        {
+          "concern": {
+            "evidence": [
+              2
+            ],
+            "text": "Focus best in the morning"
+          },
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Afternoon update"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-constrained",
+    "id": "unknown-concern",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.028366724,
+    "totalMs": 23027,
+    "gemma": {
+      "decodeTokens": 123,
+      "decodeTokensPerSecond": 12.05258153524668,
+      "generateMillis": 20887,
+      "prefillTokens": 904,
+      "prefillTokensPerSecond": 84.7109787903216,
+      "setupMillis": 2139,
+      "timeToFirstTokenMillis": 10754
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Prefer blue version\",\"e\":[1]},\"concern\":{\"t\":\"\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Prefer green version\",\"e\":[2]},\"concern\":{\"t\":\"\",\"e\":[2]}},\"common\":{\"t\":\"\",\"e\":{\"A\":1,\"B\":2}},\"question\":{\"t\":\"What makes the blue version preferable for you and the green version preferable for you?\",\"e\":{\"A\":1,\"B\":2}},\"proposal\":{\"t\":\"Compare the features of the blue and green versions\",\"e\":{\"A\":1,\"B\":2}}}",
+    "analysis": {
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Compare the features of the blue and green versions"
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What makes the blue version preferable for you and the green version preferable for you?"
+        }
+      },
+      "views": [
+        {
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Prefer blue version"
+          },
+          "speaker": "A"
+        },
+        {
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Prefer green version"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-constrained",
+    "id": "not-agreed",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.013366699,
+    "totalMs": 23443,
+    "gemma": {
+      "decodeTokens": 123,
+      "decodeTokensPerSecond": 11.429990612314533,
+      "generateMillis": 21320,
+      "prefillTokens": 913,
+      "prefillTokensPerSecond": 86.53695467245298,
+      "setupMillis": 2123,
+      "timeToFirstTokenMillis": 10637
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Meeting at four\",\"e\":[1]},\"concern\":{\"t\":\"\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Check childcare schedule\",\"e\":[2]},\"concern\":{\"t\":\"N/A\",\"e\":[2]}},\"common\":{\"t\":\"\",\"e\":{\"A\":1,\"B\":2}},\"question\":{\"t\":\"What is your availability like around four o\u0027clock?\",\"e\":{\"A\":1,\"B\":2}},\"proposal\":{\"t\":\"Check childcare schedule and propose a time based on that\",\"e\":{\"A\":1,\"B\":2}}}",
+    "analysis": {
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Check childcare schedule and propose a time based on that"
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What is your availability like around four o\u0027clock?"
+        }
+      },
+      "views": [
+        {
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Meeting at four"
+          },
+          "speaker": "A"
+        },
+        {
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Check childcare schedule"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-constrained",
+    "id": "separate-topics",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0032999674,
+    "totalMs": 24828,
+    "gemma": {
+      "decodeTokens": 137,
+      "decodeTokensPerSecond": 11.771360129632845,
+      "generateMillis": 22701,
+      "prefillTokens": 918,
+      "prefillTokensPerSecond": 83.04681980723085,
+      "setupMillis": 2126,
+      "timeToFirstTokenMillis": 11138
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Spend the weekend training for the race\",\"e\":[1]},\"concern\":{\"t\":\"N/A\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Spend the weekend resting\",\"e\":[2]},\"concern\":{\"t\":\"Do not want to train\",\"e\":[2]}},\"common\":{\"t\":\"Weekend activity\",\"e\":{\"A\":1,\"B\":2}},\"question\":{\"t\":\"What is most important for you regarding the weekend activities?\",\"e\":{\"A\":1,\"B\":2}},\"proposal\":{\"t\":\"Discuss the balance between training and resting for the weekend\",\"e\":{\"A\":1,\"B\":2}}}",
+    "analysis": {
+      "commonGround": {
+        "evidence": [
+          1,
+          2
+        ],
+        "text": "Weekend activity"
+      },
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Discuss the balance between training and resting for the weekend"
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What is most important for you regarding the weekend activities?"
+        }
+      },
+      "views": [
+        {
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Spend the weekend training for the race"
+          },
+          "speaker": "A"
+        },
+        {
+          "concern": {
+            "evidence": [
+              2
+            ],
+            "text": "Do not want to train"
+          },
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Spend the weekend resting"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-constrained",
+    "id": "unsupported-psychology",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 26198,
+    "gemma": {
+      "decodeTokens": 148,
+      "decodeTokensPerSecond": 11.550557519430514,
+      "generateMillis": 24073,
+      "prefillTokens": 914,
+      "prefillTokensPerSecond": 81.23140796597761,
+      "setupMillis": 2124,
+      "timeToFirstTokenMillis": 11338
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Let me finish my sentence\",\"e\":[1]},\"concern\":{\"t\":\"\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Jump in\",\"e\":[2]},\"concern\":{\"t\":\"Worry I will forget my question\",\"e\":[2]}}\n,\n\"common\":{\"t\":\"\",\"e\":{\"A\":1,\"B\":2}},\n\"question\":{\"t\":\"What is your main concern when you jump in, and what is your main concern when you want to finish your sentence?\",\"e\":{\"A\":1,\"B\":2}},\n\"proposal\":{\"t\":\"Try pausing before jumping in to ensure you finish your thought.\",\"e\":{\"A\":1,\"B\":2}}}",
+    "analysis": {
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Try pausing before jumping in to ensure you finish your thought."
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What is your main concern when you jump in, and what is your main concern when you want to finish your sentence?"
+        }
+      },
+      "views": [
+        {
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Let me finish my sentence"
+          },
+          "speaker": "A"
+        },
+        {
+          "concern": {
+            "evidence": [
+              2
+            ],
+            "text": "Worry I will forget my question"
+          },
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Jump in"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-constrained",
+    "id": "untrusted-transcript",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 24664,
+    "gemma": {
+      "decodeTokens": 125,
+      "decodeTokensPerSecond": 11.111211013243912,
+      "generateMillis": 22537,
+      "prefillTokens": 921,
+      "prefillTokensPerSecond": 81.65049587564697,
+      "setupMillis": 2126,
+      "timeToFirstTokenMillis": 11369
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Clear deadline\",\"e\":[1]},\"concern\":{\"t\":\"\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Enough time to estimate before promising a deadline\",\"e\":[2]},\"concern\":{\"t\":\"\",\"e\":[2]}}\n,\n\"common\":{\"t\":\"\",\"e\":{\"A\":1,\"B\":2}},\n\"question\":{\"t\":\"What is the timeframe you need to estimate within?\",\"e\":{\"A\":1,\"B\":2}},\n\"proposal\":{\"t\":\"Propose a specific time frame for estimation\",\"e\":{\"A\":1,\"B\":2}}}",
+    "analysis": {
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Propose a specific time frame for estimation"
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What is the timeframe you need to estimate within?"
+        }
+      },
+      "views": [
+        {
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Clear deadline"
+          },
+          "speaker": "A"
+        },
+        {
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Enough time to estimate before promising a deadline"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "variant": "cpu4-unconstrained",
+    "id": "initialize",
+    "totalMs": 7393,
+    "backend": "Gemma 4 E2B · CPU · 4 threads"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-unconstrained",
+    "id": "warm-up",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 13065,
+    "gemma": {
+      "decodeTokens": 71,
+      "decodeTokensPerSecond": 17.468500576483525,
+      "generateMillis": 10899,
+      "prefillTokens": 920,
+      "prefillTokensPerSecond": 134.7109480494436,
+      "setupMillis": 2166,
+      "timeToFirstTokenMillis": 6886
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Daily update\",\"e\":[1]},\"concern\":{\"t\":\"Responsible for delivery\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Finish on time\",\"e\":[2]},\"concern\":{\"t\":\"Constant check-ins break my focus\",\"e\":[2]}},\"common\":{\"t\":\"\",\"e\":[]}}",
+    "invalid": "IllegalArgumentException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-unconstrained",
+    "id": "delivery",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0037333171,
+    "totalMs": 15175,
+    "gemma": {
+      "decodeTokens": 71,
+      "decodeTokensPerSecond": 17.597081140526043,
+      "generateMillis": 11584,
+      "prefillTokens": 920,
+      "prefillTokensPerSecond": 121.97555491271581,
+      "setupMillis": 3590,
+      "timeToFirstTokenMillis": 7599
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Daily update\",\"e\":[1]},\"concern\":{\"t\":\"Responsible for delivery\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Finish on time\",\"e\":[2]},\"concern\":{\"t\":\"Constant check-ins break my focus\",\"e\":[2]}},\"common\":{\"t\":\"\",\"e\":[]}}",
+    "invalid": "IllegalArgumentException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-unconstrained",
+    "id": "roommates",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.01206665,
+    "totalMs": 14651,
+    "gemma": {
+      "decodeTokens": 66,
+      "decodeTokensPerSecond": 17.020638739900466,
+      "generateMillis": 11083,
+      "prefillTokens": 922,
+      "prefillTokensPerSecond": 128.1007661767541,
+      "setupMillis": 3555,
+      "timeToFirstTokenMillis": 7256
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Need quiet after ten\",\"e\":[1]},\"concern\":{\"t\":\"Work at six in the morning\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Invite friends home sometimes\",\"e\":[2]},\"concern\":{\"t\":\"Feel like my home too\",\"e\":[2]}}",
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-unconstrained",
+    "id": "budget",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.021633275,
+    "totalMs": 14709,
+    "gemma": {
+      "decodeTokens": 67,
+      "decodeTokensPerSecond": 17.44349215667916,
+      "generateMillis": 11096,
+      "prefillTokens": 919,
+      "prefillTokensPerSecond": 126.7966870663703,
+      "setupMillis": 3611,
+      "timeToFirstTokenMillis": 7305
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Spend no more than five hundred dollars\",\"e\":[1]},\"concern\":{\"t\":\"Budget constraint\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Buy used quality equipment rather than cheap new equipment\",\"e\":[2]},\"concern\":{\"t\":\"Equipment longevity\",\"e\":[2]}}",
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-unconstrained",
+    "id": "negation",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.028766632,
+    "totalMs": 24493,
+    "gemma": {
+      "decodeTokens": 132,
+      "decodeTokensPerSecond": 11.891689572470652,
+      "generateMillis": 20992,
+      "prefillTokens": 919,
+      "prefillTokensPerSecond": 92.98378267934001,
+      "setupMillis": 3500,
+      "timeToFirstTokenMillis": 9967
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Written updates instead of meetings\",\"e\":[1]},\"concern\":{\"t\":\"Do not want more meetings\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"A way to ask questions when a written update is unclear\",\"e\":[2]},\"concern\":{\"t\":\"\",\"e\":[2]}},\"common\":{\"t\":\"\",\"e\":[1,2]},\"question\":{\"t\":\"What kind of written updates do you need, and how do you prefer to ask questions?\",\"e\":[1,2]},\"proposal\":{\"t\":\"A written update template with a dedicated section for clarification questions\",\"e\":[1,2]}}",
+    "invalid": "IllegalStateException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-unconstrained",
+    "id": "correction",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.019933319,
+    "totalMs": 18343,
+    "gemma": {
+      "decodeTokens": 61,
+      "decodeTokensPerSecond": 10.842844628500409,
+      "generateMillis": 14765,
+      "prefillTokens": 944,
+      "prefillTokensPerSecond": 103.37763237030441,
+      "setupMillis": 3572,
+      "timeToFirstTokenMillis": 9223
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Update at four\",\"e\":[3]},\"concern\":{\"t\":\"Need an update\",\"e\":[3]}},\"B\":{\"request\":{\"t\":\"Afternoon update\",\"e\":[2]},\"concern\":{\"t\":\"Focus best in the morning\",\"e\":[2]}}",
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-unconstrained",
+    "id": "unknown-concern",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0054667154,
+    "totalMs": 25079,
+    "gemma": {
+      "decodeTokens": 123,
+      "decodeTokensPerSecond": 11.942929550639068,
+      "generateMillis": 21470,
+      "prefillTokens": 904,
+      "prefillTokensPerSecond": 80.97723733468459,
+      "setupMillis": 3608,
+      "timeToFirstTokenMillis": 11247
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Prefer blue version\",\"e\":[1]},\"concern\":{\"t\":\"\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Prefer green version\",\"e\":[2]},\"concern\":{\"t\":\"\",\"e\":[2]}},\"common\":{\"t\":\"\",\"e\":{\"A\":1,\"B\":2}},\"question\":{\"t\":\"What makes the blue version preferable for you and the green version preferable for you?\",\"e\":{\"A\":1,\"B\":2}},\"proposal\":{\"t\":\"Compare the features of the blue and green versions\",\"e\":{\"A\":1,\"B\":2}}}",
+    "analysis": {
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Compare the features of the blue and green versions"
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What makes the blue version preferable for you and the green version preferable for you?"
+        }
+      },
+      "views": [
+        {
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Prefer blue version"
+          },
+          "speaker": "A"
+        },
+        {
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Prefer green version"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-unconstrained",
+    "id": "not-agreed",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 25321,
+    "gemma": {
+      "decodeTokens": 123,
+      "decodeTokensPerSecond": 11.356749062957288,
+      "generateMillis": 21709,
+      "prefillTokens": 913,
+      "prefillTokensPerSecond": 83.97956358699841,
+      "setupMillis": 3604,
+      "timeToFirstTokenMillis": 10959
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Meeting at four\",\"e\":[1]},\"concern\":{\"t\":\"\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Check childcare schedule\",\"e\":[2]},\"concern\":{\"t\":\"N/A\",\"e\":[2]}},\"common\":{\"t\":\"\",\"e\":{\"A\":1,\"B\":2}},\"question\":{\"t\":\"What is your availability like around four o\u0027clock?\",\"e\":{\"A\":1,\"B\":2}},\"proposal\":{\"t\":\"Check childcare schedule and propose a time based on that\",\"e\":{\"A\":1,\"B\":2}}}",
+    "analysis": {
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Check childcare schedule and propose a time based on that"
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What is your availability like around four o\u0027clock?"
+        }
+      },
+      "views": [
+        {
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Meeting at four"
+          },
+          "speaker": "A"
+        },
+        {
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Check childcare schedule"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-unconstrained",
+    "id": "separate-topics",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 27392,
+    "gemma": {
+      "decodeTokens": 137,
+      "decodeTokensPerSecond": 11.714473604889971,
+      "generateMillis": 23803,
+      "prefillTokens": 918,
+      "prefillTokensPerSecond": 75.85875451866802,
+      "setupMillis": 3587,
+      "timeToFirstTokenMillis": 12186
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Spend the weekend training for the race\",\"e\":[1]},\"concern\":{\"t\":\"N/A\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Spend the weekend resting\",\"e\":[2]},\"concern\":{\"t\":\"Do not want to train\",\"e\":[2]}},\"common\":{\"t\":\"Weekend activity\",\"e\":{\"A\":1,\"B\":2}},\"question\":{\"t\":\"What is most important for you regarding the weekend activities?\",\"e\":{\"A\":1,\"B\":2}},\"proposal\":{\"t\":\"Discuss the balance between training and resting for the weekend\",\"e\":{\"A\":1,\"B\":2}}}",
+    "analysis": {
+      "commonGround": {
+        "evidence": [
+          1,
+          2
+        ],
+        "text": "Weekend activity"
+      },
+      "intervention": {
+        "proposal": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Discuss the balance between training and resting for the weekend"
+        },
+        "question": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "What is most important for you regarding the weekend activities?"
+        }
+      },
+      "views": [
+        {
+          "request": {
+            "evidence": [
+              1
+            ],
+            "text": "Spend the weekend training for the race"
+          },
+          "speaker": "A"
+        },
+        {
+          "concern": {
+            "evidence": [
+              2
+            ],
+            "text": "Do not want to train"
+          },
+          "request": {
+            "evidence": [
+              2
+            ],
+            "text": "Spend the weekend resting"
+          },
+          "speaker": "B"
+        }
+      ]
+    }
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-unconstrained",
+    "id": "unsupported-psychology",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 20066,
+    "gemma": {
+      "decodeTokens": 60,
+      "decodeTokensPerSecond": 11.597970961655593,
+      "generateMillis": 16679,
+      "prefillTokens": 914,
+      "prefillTokensPerSecond": 79.4940398143411,
+      "setupMillis": 3375,
+      "timeToFirstTokenMillis": 11583
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Let me finish my sentence\",\"e\":[1]},\"concern\":{\"t\":\"\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Jump in\",\"e\":[2]},\"concern\":{\"t\":\"Worry I will forget my question\",\"e\":[2]}}",
+    "invalid": "JsonSyntaxException"
+  },
+  {
+    "maxNumTokens": 8192,
+    "variant": "cpu4-unconstrained",
+    "id": "untrusted-transcript",
+    "thermalStatus": 0,
+    "thermalHeadroom": 0.0,
+    "totalMs": 19721,
+    "gemma": {
+      "decodeTokens": 55,
+      "decodeTokensPerSecond": 11.098901272602784,
+      "generateMillis": 16154,
+      "prefillTokens": 921,
+      "prefillTokensPerSecond": 82.30232835747951,
+      "setupMillis": 3554,
+      "timeToFirstTokenMillis": 11280
+    },
+    "raw": "{\"A\":{\"request\":{\"t\":\"Clear deadline\",\"e\":[1]},\"concern\":{\"t\":\"\",\"e\":[1]}},\"B\":{\"request\":{\"t\":\"Enough time to estimate before promising a deadline\",\"e\":[2]},\"concern\":{\"t\":\"\",\"e\":[2]}}",
+    "invalid": "JsonSyntaxException"
+  }
+]
