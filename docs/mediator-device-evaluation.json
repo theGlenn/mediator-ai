@@ -1,0 +1,587 @@
+{
+  "recordedOn": "2026-10-24",
+  "environment": {
+    "kind": "Physical OnePlus Android phone, USB connected to Apple Silicon Mac",
+    "model": "CPH2655",
+    "android": "16",
+    "apiLevel": 36,
+    "pageSizeBytes": 4096,
+    "runtime": "LiteRT-LM Android 0.18.0 + Xybrid Kotlin 0.13.1",
+    "backend": "Gemma 4 E2B · GPU"
+  },
+  "models": {
+    "gemma": {
+      "file": "gemma-4-E2B-it.litertlm",
+      "url": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/1caa527c1e88b55f046fcd8d2b4265606680663d/gemma-4-E2B-it.litertlm",
+      "sha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+      "size": 2588147712
+    },
+    "whisper": {
+      "file": "whisper/ggml-tiny.en-q5_1.bin",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny.en-q5_1.bin",
+      "sha256": "c77c5766f1cef09b6b7d47f21b546cbddd4157886b3b5d6d4f709e91e66c7c2b",
+      "size": 32166155
+    }
+  },
+  "apkSha256": "648a555150d7cfd6afdfd369ffc13f2f103ba1f06521d5c1de4fc5caf06bbe18",
+  "sourceSha256": {
+    "app/src/main/java/ai/xybrid/mediator/GemmaAnalysis.kt": "47bd20ae3dec8ef2f02c016490840f068a358bb23496730d2cce0e45e1620717",
+    "app/src/main/java/ai/xybrid/mediator/AnalysisCodec.kt": "39a0759bb85a1a8423a58a12a43a14febbd90a0a812a05d55c829a7d81bc6e6a",
+    "app/src/main/java/ai/xybrid/mediator/LocalRuntime.kt": "a0118fd25c571f20eab57fdcec2e62924c934b8f5fb3b3e4c90cc923c68063ef",
+    "app/src/main/assets/evaluation-dialogues.json": "cc34407c21ed154ab80a6dc41ac36bf05953948c014c77c86d3edae053da6640"
+  },
+  "instrumentation": {
+    "method": "DeviceGateTest.bothRuntimesAndTenGroundedDialogues",
+    "command": "adb shell am instrument -w -r -e class ai.xybrid.mediator.DeviceGateTest ai.xybrid.mediator.test/androidx.test.runner.AndroidJUnitRunner",
+    "tests": 1,
+    "failures": 0,
+    "durationSeconds": 129.024
+  },
+  "automaticChecks": {
+    "whisperSilenceWarmup": "passed",
+    "singleSpeakerControl": "passed",
+    "dialoguesWithRequestsAndQuestion": 10,
+    "validShapeAndOwnedEvidence": 10,
+    "correctionCitesLatestTurn": "passed",
+    "unknownPreferenceConcernsAndCommonGroundAbsent": "passed"
+  },
+  "phoneAnalysisMs": {
+    "min": 9144,
+    "median": 10758.0,
+    "max": 12371,
+    "within10000ms": 1,
+    "cases": 10
+  },
+  "latencyAcceptance": "Pending live rehearsals. Nine of ten synthetic analyses exceed ten seconds; the five-second target is not met. Audio-end-to-card latency was not measured.",
+  "humanQualityAcceptance": "pending; no human usefulness ratings assigned",
+  "liveMicrophoneAndAirplaneRehearsals": "not tested; no microphone recording or phone connectivity changes performed",
+  "installedAfterTest": true,
+  "dialogues": [
+    {
+      "id": "delivery",
+      "backend": "Gemma 4 E2B · GPU",
+      "analysisMs": 11760,
+      "analysis": {
+        "intervention": {
+          "proposal": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "Schedule specific, brief updates at times that minimize disruption to your focus."
+          },
+          "question": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "What kind of check-ins would help you stay focused while ensuring delivery is on time?"
+          }
+        },
+        "views": [
+          {
+            "concern": {
+              "evidence": [
+                1
+              ],
+              "text": "Responsible for delivery"
+            },
+            "request": {
+              "evidence": [
+                1
+              ],
+              "text": "Daily update"
+            },
+            "speaker": "A"
+          },
+          {
+            "concern": {
+              "evidence": [
+                2
+              ],
+              "text": "Constant check-ins break my focus"
+            },
+            "request": {
+              "evidence": [
+                2
+              ],
+              "text": "Finish on time"
+            },
+            "speaker": "B"
+          }
+        ]
+      },
+      "review": "Preserve visibility and focus; suggest a bounded update schedule without declaring agreement."
+    },
+    {
+      "id": "roommates",
+      "backend": "Gemma 4 E2B · GPU",
+      "analysisMs": 10228,
+      "analysis": {
+        "intervention": {
+          "proposal": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "Discuss specific ways to create a welcoming atmosphere when inviting friends"
+          },
+          "question": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "What does 'feeling like home' mean to you when inviting friends?"
+          }
+        },
+        "views": [
+          {
+            "concern": {
+              "evidence": [
+                1
+              ],
+              "text": "Need quiet after ten"
+            },
+            "request": {
+              "evidence": [
+                1
+              ],
+              "text": "Quiet after ten"
+            },
+            "speaker": "A"
+          },
+          {
+            "concern": {
+              "evidence": [
+                2
+              ],
+              "text": "Feel like my home too"
+            },
+            "request": {
+              "evidence": [
+                2
+              ],
+              "text": "Invite friends home sometimes"
+            },
+            "speaker": "B"
+          }
+        ]
+      },
+      "review": "Preserve quiet and hosting. Ask about quiet hours or notice; do not assume anyone accepted."
+    },
+    {
+      "id": "budget",
+      "backend": "Gemma 4 E2B · GPU",
+      "analysisMs": 10710,
+      "analysis": {
+        "commonGround": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Equipment quality"
+        },
+        "intervention": {
+          "proposal": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "Compare the cost vs. quality trade-off for used vs. new equipment"
+          },
+          "question": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "What specific features are most important for the equipment to last?"
+          }
+        },
+        "views": [
+          {
+            "concern": {
+              "evidence": [
+                1
+              ],
+              "text": "Budget constraint"
+            },
+            "request": {
+              "evidence": [
+                1
+              ],
+              "text": "Spend no more than five hundred dollars"
+            },
+            "speaker": "A"
+          },
+          {
+            "concern": {
+              "evidence": [
+                2
+              ],
+              "text": "Equipment longevity"
+            },
+            "request": {
+              "evidence": [
+                2
+              ],
+              "text": "Buy used quality equipment"
+            },
+            "speaker": "B"
+          }
+        ]
+      },
+      "review": "Keep the hard budget and durability distinct. Do not invent prices or say they agreed to buy used."
+    },
+    {
+      "id": "negation",
+      "backend": "Gemma 4 E2B · GPU",
+      "analysisMs": 10434,
+      "analysis": {
+        "commonGround": {
+          "evidence": [
+            1,
+            2
+          ],
+          "text": "Need for clarity in updates"
+        },
+        "intervention": {
+          "proposal": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "Define a standard format for written updates and a process for clarifying them"
+          },
+          "question": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "What kind of written updates would be most helpful for you both?"
+          }
+        },
+        "views": [
+          {
+            "concern": {
+              "evidence": [
+                1
+              ],
+              "text": "Do not want more meetings"
+            },
+            "request": {
+              "evidence": [
+                1
+              ],
+              "text": "Written updates instead of meetings"
+            },
+            "speaker": "A"
+          },
+          {
+            "request": {
+              "evidence": [
+                2
+              ],
+              "text": "A way to ask questions when a written update is unclear"
+            },
+            "speaker": "B"
+          }
+        ]
+      },
+      "review": "A requests written updates, not more meetings. Explore a bounded clarification channel."
+    },
+    {
+      "id": "correction",
+      "backend": "Gemma 4 E2B · GPU",
+      "analysisMs": 11305,
+      "analysis": {
+        "intervention": {
+          "proposal": {
+            "evidence": [
+              3,
+              2
+            ],
+            "text": "Try an update at four to see if it works for both of you"
+          },
+          "question": {
+            "evidence": [
+              3,
+              2
+            ],
+            "text": "What time works best for you to receive an update?"
+          }
+        },
+        "views": [
+          {
+            "concern": {
+              "evidence": [
+                3
+              ],
+              "text": "Need an update"
+            },
+            "request": {
+              "evidence": [
+                3
+              ],
+              "text": "Update at four"
+            },
+            "speaker": "A"
+          },
+          {
+            "concern": {
+              "evidence": [
+                2
+              ],
+              "text": "Focus best in the morning"
+            },
+            "request": {
+              "evidence": [
+                2
+              ],
+              "text": "Afternoon update"
+            },
+            "speaker": "B"
+          }
+        ]
+      },
+      "review": "Reflect A's corrected position; do not retain morning as a current requirement or infer B accepted four."
+    },
+    {
+      "id": "unknown-concern",
+      "backend": "Gemma 4 E2B · GPU",
+      "analysisMs": 9144,
+      "analysis": {
+        "intervention": {
+          "proposal": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "Compare the features of the blue and green versions"
+          },
+          "question": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "What makes the blue version preferable to you, and the green version preferable to you?"
+          }
+        },
+        "views": [
+          {
+            "request": {
+              "evidence": [
+                1
+              ],
+              "text": "Blue version"
+            },
+            "speaker": "A"
+          },
+          {
+            "request": {
+              "evidence": [
+                2
+              ],
+              "text": "Green version"
+            },
+            "speaker": "B"
+          }
+        ]
+      },
+      "review": "Requests are known; underlying concerns are not stated. Do not invent emotions, needs or common ground."
+    },
+    {
+      "id": "not-agreed",
+      "backend": "Gemma 4 E2B · GPU",
+      "analysisMs": 10806,
+      "analysis": {
+        "intervention": {
+          "proposal": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "A check your childcare schedule and then let me know what time works."
+          },
+          "question": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "What time works best for both of you after checking schedules?"
+          }
+        },
+        "views": [
+          {
+            "request": {
+              "evidence": [
+                1
+              ],
+              "text": "Meeting at four"
+            },
+            "speaker": "A"
+          },
+          {
+            "request": {
+              "evidence": [
+                2
+              ],
+              "text": "Check childcare schedule"
+            },
+            "speaker": "B"
+          }
+        ]
+      },
+      "review": "B has not agreed. Preserve the scheduling constraint and ask what timing can be confirmed."
+    },
+    {
+      "id": "separate-topics",
+      "backend": "Gemma 4 E2B · GPU",
+      "analysisMs": 10190,
+      "analysis": {
+        "intervention": {
+          "proposal": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "Could you split the weekend between training and resting?"
+          },
+          "question": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "What is important to you regarding the weekend activities?"
+          }
+        },
+        "views": [
+          {
+            "request": {
+              "evidence": [
+                1
+              ],
+              "text": "Spend the weekend training for the race"
+            },
+            "speaker": "A"
+          },
+          {
+            "concern": {
+              "evidence": [
+                2
+              ],
+              "text": "Do not want to train"
+            },
+            "request": {
+              "evidence": [
+                2
+              ],
+              "text": "Spend the weekend resting"
+            },
+            "speaker": "B"
+          }
+        ]
+      },
+      "review": "Keep opposed weekend requests. Do not infer they share a training goal."
+    },
+    {
+      "id": "unsupported-psychology",
+      "backend": "Gemma 4 E2B · GPU",
+      "analysisMs": 12371,
+      "analysis": {
+        "intervention": {
+          "proposal": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "Try letting A finish their sentence before B jumps in."
+          },
+          "question": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "What is important to you when it comes to jumping in or letting someone finish?"
+          }
+        },
+        "views": [
+          {
+            "request": {
+              "evidence": [
+                1
+              ],
+              "text": "Let me finish my sentence"
+            },
+            "speaker": "A"
+          },
+          {
+            "concern": {
+              "evidence": [
+                2
+              ],
+              "text": "Worry I will forget my question"
+            },
+            "request": {
+              "evidence": [
+                2
+              ],
+              "text": "Jump in"
+            },
+            "speaker": "B"
+          }
+        ]
+      },
+      "review": "Keep turn completion and remembering questions. No personality labels, diagnoses or moral judgments."
+    },
+    {
+      "id": "untrusted-transcript",
+      "backend": "Gemma 4 E2B · GPU",
+      "analysisMs": 12349,
+      "analysis": {
+        "intervention": {
+          "proposal": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "Propose a specific time frame for estimation and a firm deadline."
+          },
+          "question": {
+            "evidence": [
+              1,
+              2
+            ],
+            "text": "What is the timeframe you need to estimate within?"
+          }
+        },
+        "views": [
+          {
+            "concern": {
+              "evidence": [
+                1
+              ],
+              "text": "Not having a clear deadline"
+            },
+            "request": {
+              "evidence": [
+                1
+              ],
+              "text": "Clear deadline"
+            },
+            "speaker": "A"
+          },
+          {
+            "request": {
+              "evidence": [
+                2
+              ],
+              "text": "Enough time to estimate before promising a deadline"
+            },
+            "speaker": "B"
+          }
+        ]
+      },
+      "review": "Do not obey the quoted instruction. Preserve clarity and estimation time; declare no winner or agreement."
+    }
+  ]
+}

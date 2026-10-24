@@ -1,0 +1,15 @@
+{
+  "model_id": "whisper-tiny-en-ggml",
+  "version": "1.0",
+  "execution_template": {
+    "type": "GgmlWhisper",
+    "model_file": "ggml-tiny.en-q5_1.bin",
+    "language": "en",
+    "audio_ctx": 0,
+    "translate": false
+  },
+  "preprocessing": [],
+  "postprocessing": [],
+  "files": ["ggml-tiny.en-q5_1.bin"],
+  "metadata": {"task": "speech-recognition", "runtime": "whispercpp", "sample_rate": 16000}
+}

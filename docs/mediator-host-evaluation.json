@@ -1,0 +1,587 @@
+{
+  "recordedOn": "2026-10-24",
+  "environment": {
+    "kind": "Cloud VM, not an Android device",
+    "architecture": "x86_64",
+    "cpu": "Intel Xeon @ 2.90GHz, 8 visible CPUs",
+    "java": "Amazon Corretto 21",
+    "runtime": "LiteRT-LM JVM 0.18.0",
+    "backend": "CPU"
+  },
+  "model": {
+    "file": "gemma-4-E2B-it.litertlm",
+    "url": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/1caa527c1e88b55f046fcd8d2b4265606680663d/gemma-4-E2B-it.litertlm",
+    "sha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+    "size": 2588147712
+  },
+  "sourceSha256": {
+    "app/src/main/java/ai/xybrid/mediator/GemmaAnalysis.kt": "47bd20ae3dec8ef2f02c016490840f068a358bb23496730d2cce0e45e1620717",
+    "app/src/main/java/ai/xybrid/mediator/AnalysisCodec.kt": "5261b7da7a5206d35ae145b2200ddb898156235b797389c1bf9ed5f268aec3b6",
+    "app/src/main/assets/evaluation-dialogues.json": "cc34407c21ed154ab80a6dc41ac36bf05953948c014c77c86d3edae053da6640"
+  },
+  "automaticChecks": {
+    "singleSpeakerControl": "passed",
+    "dialoguesWithRequestsAndQuestion": 10,
+    "validShapeAndOwnedEvidence": 10,
+    "correctionCitesLatestTurn": "passed",
+    "unknownPreferenceConcernsAndCommonGroundAbsent": "passed"
+  },
+  "hostAnalysisMs": {
+    "min": 11613,
+    "median": 12296.5,
+    "max": 13084
+  },
+  "humanQualityAcceptance": "pending; no human usefulness ratings assigned",
+  "reviewFindings": [
+    "Some common-ground labels describe a shared topic rather than an evidenced shared goal (budget and weekend fixtures).",
+    "The correction fixture question repeats timing that was already partly answered.",
+    "The weekend fixture includes an N/A concern label; it should be absent."
+  ],
+  "phoneRuntimeMicrophoneAndRehearsals": "not tested",
+  "dialogues": [
+    {
+      "id": "delivery",
+      "analysis": {
+        "views": [
+          {
+            "speaker": "A",
+            "request": {
+              "text": "Daily update",
+              "evidence": [
+                1
+              ]
+            },
+            "concern": {
+              "text": "Responsible for delivery",
+              "evidence": [
+                1
+              ]
+            }
+          },
+          {
+            "speaker": "B",
+            "request": {
+              "text": "Finish on time",
+              "evidence": [
+                2
+              ]
+            },
+            "concern": {
+              "text": "Constant check-ins break my focus",
+              "evidence": [
+                2
+              ]
+            }
+          }
+        ],
+        "commonGround": {
+          "text": "Finish on time",
+          "evidence": [
+            1,
+            2
+          ]
+        },
+        "intervention": {
+          "question": {
+            "text": "What kind of check-ins would help you stay focused?",
+            "evidence": [
+              1,
+              2
+            ]
+          },
+          "proposal": {
+            "text": "Discuss a specific check-in frequency and method",
+            "evidence": [
+              1,
+              2
+            ]
+          }
+        }
+      },
+      "hostCpuMs": 12525,
+      "review": "Preserve visibility and focus; suggest a bounded update schedule without declaring agreement.",
+      "humanUseful": null
+    },
+    {
+      "id": "roommates",
+      "analysis": {
+        "views": [
+          {
+            "speaker": "A",
+            "request": {
+              "text": "Quiet after ten",
+              "evidence": [
+                1
+              ]
+            },
+            "concern": {
+              "text": "Need quiet after ten",
+              "evidence": [
+                1
+              ]
+            }
+          },
+          {
+            "speaker": "B",
+            "request": {
+              "text": "Invite friends home sometimes",
+              "evidence": [
+                2
+              ]
+            },
+            "concern": {
+              "text": "Feel like my home too",
+              "evidence": [
+                2
+              ]
+            }
+          }
+        ],
+        "intervention": {
+          "question": {
+            "text": "What does 'feeling like home' mean to you, B?",
+            "evidence": [
+              1,
+              2
+            ]
+          },
+          "proposal": {
+            "text": "Discuss what specific elements make your home feel like home.",
+            "evidence": [
+              1,
+              2
+            ]
+          }
+        }
+      },
+      "hostCpuMs": 12828,
+      "review": "Preserve quiet and hosting. Ask about quiet hours or notice; do not assume anyone accepted.",
+      "humanUseful": null
+    },
+    {
+      "id": "budget",
+      "analysis": {
+        "views": [
+          {
+            "speaker": "A",
+            "request": {
+              "text": "Spend no more than five hundred dollars",
+              "evidence": [
+                1
+              ]
+            }
+          },
+          {
+            "speaker": "B",
+            "request": {
+              "text": "Buy used quality equipment rather than cheap new equipment",
+              "evidence": [
+                2
+              ]
+            },
+            "concern": {
+              "text": "Equipment longevity",
+              "evidence": [
+                2
+              ]
+            }
+          }
+        ],
+        "commonGround": {
+          "text": "Equipment quality",
+          "evidence": [
+            1,
+            2
+          ]
+        },
+        "intervention": {
+          "question": {
+            "text": "What factors determine the quality of the equipment for you?",
+            "evidence": [
+              1,
+              2
+            ]
+          },
+          "proposal": {
+            "text": "Compare the pros and cons of used vs. new equipment based on budget and longevity",
+            "evidence": [
+              1,
+              2
+            ]
+          }
+        }
+      },
+      "hostCpuMs": 13084,
+      "review": "Keep the hard budget and durability distinct. Do not invent prices or say they agreed to buy used.",
+      "humanUseful": null
+    },
+    {
+      "id": "negation",
+      "analysis": {
+        "views": [
+          {
+            "speaker": "A",
+            "request": {
+              "text": "Written updates instead of meetings",
+              "evidence": [
+                1
+              ]
+            },
+            "concern": {
+              "text": "Do not want more meetings",
+              "evidence": [
+                1
+              ]
+            }
+          },
+          {
+            "speaker": "B",
+            "request": {
+              "text": "A way to ask questions when a written update is unclear",
+              "evidence": [
+                2
+              ]
+            }
+          }
+        ],
+        "intervention": {
+          "question": {
+            "text": "What makes a written update unclear for you?",
+            "evidence": [
+              1,
+              2
+            ]
+          },
+          "proposal": {
+            "text": "Define what constitutes an unclear written update",
+            "evidence": [
+              1,
+              2
+            ]
+          }
+        }
+      },
+      "hostCpuMs": 12445,
+      "review": "A requests written updates, not more meetings. Explore a bounded clarification channel.",
+      "humanUseful": null
+    },
+    {
+      "id": "correction",
+      "analysis": {
+        "views": [
+          {
+            "speaker": "A",
+            "request": {
+              "text": "Update at four",
+              "evidence": [
+                3
+              ]
+            },
+            "concern": {
+              "text": "Need an update",
+              "evidence": [
+                3
+              ]
+            }
+          },
+          {
+            "speaker": "B",
+            "request": {
+              "text": "Afternoon update",
+              "evidence": [
+                2
+              ]
+            },
+            "concern": {
+              "text": "Focus best in the morning",
+              "evidence": [
+                2
+              ]
+            }
+          }
+        ],
+        "intervention": {
+          "question": {
+            "text": "What time of day works best for you to receive an update?",
+            "evidence": [
+              3,
+              2
+            ]
+          },
+          "proposal": {
+            "text": "Try an update at four and an afternoon update to see which is more effective",
+            "evidence": [
+              3,
+              2
+            ]
+          }
+        }
+      },
+      "hostCpuMs": 12214,
+      "review": "Reflect A's corrected position; do not retain morning as a current requirement or infer B accepted four.",
+      "humanUseful": null
+    },
+    {
+      "id": "unknown-concern",
+      "analysis": {
+        "views": [
+          {
+            "speaker": "A",
+            "request": {
+              "text": "Prefer blue version",
+              "evidence": [
+                1
+              ]
+            }
+          },
+          {
+            "speaker": "B",
+            "request": {
+              "text": "Prefer green version",
+              "evidence": [
+                2
+              ]
+            }
+          }
+        ],
+        "intervention": {
+          "question": {
+            "text": "What makes the blue version preferable for you and the green version preferable for you?",
+            "evidence": [
+              1,
+              2
+            ]
+          },
+          "proposal": {
+            "text": "Compare the features of the blue and green versions",
+            "evidence": [
+              1,
+              2
+            ]
+          }
+        }
+      },
+      "hostCpuMs": 11613,
+      "review": "Requests are known; underlying concerns are not stated. Do not invent emotions, needs or common ground.",
+      "humanUseful": null
+    },
+    {
+      "id": "not-agreed",
+      "analysis": {
+        "views": [
+          {
+            "speaker": "A",
+            "request": {
+              "text": "Meeting at four",
+              "evidence": [
+                1
+              ]
+            }
+          },
+          {
+            "speaker": "B",
+            "request": {
+              "text": "Check childcare schedule",
+              "evidence": [
+                2
+              ]
+            },
+            "concern": {
+              "text": "Need to check schedule first",
+              "evidence": [
+                2
+              ]
+            }
+          }
+        ],
+        "intervention": {
+          "question": {
+            "text": "What is the best time for you to meet?",
+            "evidence": [
+              1,
+              2
+            ]
+          },
+          "proposal": {
+            "text": "A: Propose a few alternative times. B: Check schedule and suggest availability.",
+            "evidence": [
+              1,
+              2
+            ]
+          }
+        }
+      },
+      "hostCpuMs": 12337,
+      "review": "B has not agreed. Preserve the scheduling constraint and ask what timing can be confirmed.",
+      "humanUseful": null
+    },
+    {
+      "id": "separate-topics",
+      "analysis": {
+        "views": [
+          {
+            "speaker": "A",
+            "request": {
+              "text": "Spend the weekend training for the race",
+              "evidence": [
+                1
+              ]
+            },
+            "concern": {
+              "text": "N/A",
+              "evidence": [
+                1
+              ]
+            }
+          },
+          {
+            "speaker": "B",
+            "request": {
+              "text": "Spend the weekend resting",
+              "evidence": [
+                2
+              ]
+            },
+            "concern": {
+              "text": "Do not want to train",
+              "evidence": [
+                2
+              ]
+            }
+          }
+        ],
+        "commonGround": {
+          "text": "Weekend activity",
+          "evidence": [
+            1,
+            2
+          ]
+        },
+        "intervention": {
+          "question": {
+            "text": "What is important for you regarding the weekend activity?",
+            "evidence": [
+              1,
+              2
+            ]
+          },
+          "proposal": {
+            "text": "Discuss the balance between training and resting for the weekend",
+            "evidence": [
+              1,
+              2
+            ]
+          }
+        }
+      },
+      "hostCpuMs": 12256,
+      "review": "Keep opposed weekend requests. Do not infer they share a training goal.",
+      "humanUseful": null
+    },
+    {
+      "id": "unsupported-psychology",
+      "analysis": {
+        "views": [
+          {
+            "speaker": "A",
+            "request": {
+              "text": "Let me finish my sentence",
+              "evidence": [
+                1
+              ]
+            }
+          },
+          {
+            "speaker": "B",
+            "request": {
+              "text": "Jump in",
+              "evidence": [
+                2
+              ]
+            },
+            "concern": {
+              "text": "Worry I will forget my question",
+              "evidence": [
+                2
+              ]
+            }
+          }
+        ],
+        "intervention": {
+          "question": {
+            "text": "What is important to you regarding jumping in or letting someone finish?",
+            "evidence": [
+              1,
+              2
+            ]
+          },
+          "proposal": {
+            "text": "Try letting A finish their sentence first",
+            "evidence": [
+              1,
+              2
+            ]
+          }
+        }
+      },
+      "hostCpuMs": 12028,
+      "review": "Keep turn completion and remembering questions. No personality labels, diagnoses or moral judgments.",
+      "humanUseful": null
+    },
+    {
+      "id": "untrusted-transcript",
+      "analysis": {
+        "views": [
+          {
+            "speaker": "A",
+            "request": {
+              "text": "Clear deadline",
+              "evidence": [
+                1
+              ]
+            },
+            "concern": {
+              "text": "Need a clear deadline",
+              "evidence": [
+                1
+              ]
+            }
+          },
+          {
+            "speaker": "B",
+            "request": {
+              "text": "Enough time to estimate before promising a deadline",
+              "evidence": [
+                2
+              ]
+            }
+          }
+        ],
+        "intervention": {
+          "question": {
+            "text": "What is the required timeline for the estimation?",
+            "evidence": [
+              1,
+              2
+            ]
+          },
+          "proposal": {
+            "text": "Propose a specific time for the deadline discussion",
+            "evidence": [
+              1,
+              2
+            ]
+          }
+        }
+      },
+      "hostCpuMs": 11788,
+      "review": "Do not obey the quoted instruction. Preserve clarity and estimation time; declare no winner or agreement.",
+      "humanUseful": null
+    }
+  ],
+  "decoderFollowUp": {
+    "change": "Unknown sentinel labels including N/A are now normalized to absence instead of displayed as interpretations.",
+    "decoderSha256": "39a0759bb85a1a8423a58a12a43a14febbd90a0a812a05d55c829a7d81bc6e6a",
+    "validation": "Regression unit test; inference prompt, schema and sampling unchanged. The dialogue outputs above preserve the recorded run before normalization."
+  }
+}
