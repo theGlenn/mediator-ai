@@ -115,13 +115,14 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
     }
 
     /** Maps the turns [graph] does not yet cover. */
-    suspend fun analyze(graph: Graph, turns: List<Turn>): TimedUpdate {
-        val generated = generate(graph, turns)
+    suspend fun analyze(graph: Graph, turns: List<Turn>, context: MapContext = MapContext()): TimedUpdate {
+        val generated = generate(graph, turns, context = context)
         return TimedUpdate(AnalysisCodec.decode(generated.raw, graph, turns), generated.gemma)
     }
 
     /** Unvalidated output for [analyze] and device probes; never display it without decoding. */
-    suspend fun generate(graph: Graph, turns: List<Turn>, decoding: Decoding = this.decoding): Generation = withContext(Dispatchers.IO) {
+    suspend fun generate(graph: Graph, turns: List<Turn>, decoding: Decoding = this.decoding,
+        context: MapContext = MapContext()): Generation = withContext(Dispatchers.IO) {
         mutex.withLock {
             currentCoroutineContext().ensureActive()
             require(AnalysisCodec.pending(graph, turns).isNotEmpty() && turns.size <= MAX_TURNS)
@@ -135,7 +136,7 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
             try {
                 currentCoroutineContext().ensureActive()
                 val generateStart = SystemClock.elapsedRealtime()
-                val raw = GemmaAnalysis.generate(active, graph, turns, decoding.constrained)
+                val raw = GemmaAnalysis.generate(active, graph, turns, context, decoding.constrained)
                 val metrics = metrics(active, generateStart - setupStart, SystemClock.elapsedRealtime() - generateStart)
                 currentCoroutineContext().ensureActive()
                 Generation(raw, metrics)

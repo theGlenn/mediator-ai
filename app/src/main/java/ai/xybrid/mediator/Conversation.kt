@@ -26,6 +26,8 @@ internal data class Conversation(
     val graph: Graph = Graph(),
     /** Corrected turns whose old nodes the next analysis discards and maps again. */
     val remap: Set<Int> = emptySet(),
+    /** The latest question Gemma suggested this session, so it can decline to repeat itself. */
+    val lastQuestion: String? = null,
     val pending: Intervention? = null,
     val suggestionOpen: Boolean = false,
     val agreement: Agreement? = null,
@@ -68,7 +70,7 @@ internal data class Conversation(
         val graph = base().apply(update)
         val intervention = update.intervention.takeIf { turns.map { it.speaker }.toSet().size == 2 }
         return copy(analysis = graph.projection(intervention), analysisTurns = turns, graph = graph, remap = remap - update.turns,
-            pending = intervention, suggestionOpen = false,
+            pending = intervention, suggestionOpen = false, lastQuestion = intervention?.question?.text ?: lastQuestion,
             agreement = if (intervention?.proposal == null) agreement?.takeIf { it.complete }
                 else agreement?.takeIf { it.proposal == intervention.proposal }, pendingChimed = false)
     }

@@ -43,16 +43,22 @@ fun main(args: Array<String>) {
                 // Replays the dialogue one turn at a time, as a live session builds its map.
                 var graph = Graph()
                 var result: Analysis? = null
+                var lastQuestion: String? = null
+                var asked = false
                 for (count in 1..turns.size) {
                     val update = engine.createConversation(GemmaAnalysis.configuration()).use {
-                        GemmaAnalysis.run(it, graph, turns.take(count)) { text -> raw = text; println("${example["id"].asString} turn $count: $text") }
+                        GemmaAnalysis.run(it, graph, turns.take(count), MapContext(question = lastQuestion)) { text ->
+                            raw = text; println("${example["id"].asString} turn $count: $text")
+                        }
                     }
                     graph = graph.apply(update)
                     result = graph.projection(update.intervention)
+                    asked = asked || update.intervention != null
+                    lastQuestion = update.intervention?.question?.text ?: lastQuestion
                 }
                 val analysis = checkNotNull(result)
                 check(analysis.views.all { it.request != null }) { "Explicit requests were left empty in a test dialogue." }
-                check(analysis.intervention != null) { "An unresolved test dialogue did not produce a question." }
+                check(asked) { "An unresolved test dialogue did not produce a question." }
                 if (example["id"].asString == "correction") {
                     check(analysis.views.first().request!!.evidence.contains(3)) { "The corrected request must cite the correction." }
                 }

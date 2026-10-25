@@ -16,8 +16,8 @@ internal data class Node(val id: Int, val kind: NodeKind, val owner: Speaker?, v
 
 internal data class Link(val from: Int, val kind: LinkKind, val to: Int)
 
-/** A node proposed by one update; [link] points at an existing node, never at another new node. */
-internal data class NewNode(val kind: NodeKind, val owner: Speaker?, val claim: Claim, val link: Pair<LinkKind, Int>? = null)
+/** A node proposed by one update; [links] point at existing nodes, never at another new node. */
+internal data class NewNode(val kind: NodeKind, val owner: Speaker?, val claim: Claim, val links: List<Pair<LinkKind, Int>> = emptyList())
 
 /** What one analysis adds for the [turns] it mapped, and whether the model wants to step in. */
 internal data class GraphUpdate(val nodes: List<NewNode>, val turns: Set<Int>, val intervention: Intervention? = null,
@@ -53,8 +53,9 @@ internal data class Graph(val nodes: List<Node> = emptyList(), val links: List<L
                     view.latest(null, NodeKind.COMMON)?.let { replace(it.id) }
                     links = links + Speaker.entries.mapNotNull { view.anchor(it) }.map { Link(it.id, LinkKind.SUPPORTS, id) }
                 }
-                proposed.link?.first == LinkKind.REPLACES -> replace(proposed.link.second)
-                proposed.link != null -> links = links + Link(id, proposed.link.first, proposed.link.second)
+                proposed.links.isNotEmpty() -> proposed.links.forEach { (kind, to) ->
+                    if (kind == LinkKind.REPLACES) replace(to) else links = links + Link(id, kind, to)
+                }
                 proposed.kind == NodeKind.CONCERN ->
                     view.latest(proposed.owner, NodeKind.REQUEST)?.let { links = links + Link(id, LinkKind.EXPLAINS, it.id) }
             }

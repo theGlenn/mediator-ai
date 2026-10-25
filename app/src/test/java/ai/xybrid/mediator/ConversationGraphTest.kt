@@ -6,7 +6,7 @@ import org.junit.Test
 class ConversationGraphTest {
     private val names = mapOf(Speaker.A to "Alex", Speaker.B to "Sam")
     private fun node(kind: NodeKind, owner: Speaker?, text: String, vararg turns: Int, link: Pair<LinkKind, Int>? = null) =
-        NewNode(kind, owner, Claim(text, turns.toList()), link)
+        NewNode(kind, owner, Claim(text, turns.toList()), listOfNotNull(link))
 
     private val first = Graph().apply(GraphUpdate(listOf(node(NodeKind.REQUEST, Speaker.A, "Morning update", 1),
         node(NodeKind.CONCERN, Speaker.A, "Plan delivery", 1)), setOf(1)))

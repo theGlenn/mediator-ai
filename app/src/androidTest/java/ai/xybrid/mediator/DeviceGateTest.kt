@@ -43,19 +43,25 @@ class DeviceGateTest {
                 val updates = mutableListOf<Map<String, Any?>>()
                 try {
                     var result: Analysis? = null
+                    var asked = false
+                    var lastQuestion: String? = null
                     for (count in 1..turns.size) {
                         runtime.prepareNext() // Live turns give the background conversation setup time to finish.
                         val start = SystemClock.elapsedRealtime()
-                        val (update, gemma) = runtime.analyze(graph, turns.take(count))
+                        val (update, gemma) = runtime.analyze(graph, turns.take(count),
+                            MapContext(question = lastQuestion))
                         graph = graph.apply(update)
                         result = graph.projection(update.intervention)
+                        asked = asked || update.intervention != null
+                        lastQuestion = update.intervention?.question?.text ?: lastQuestion
                         updates += mapOf("turn" to count, "analysisMs" to SystemClock.elapsedRealtime() - start, "gemma" to gemma,
-                            "reason" to update.reason)
+                            "reason" to update.reason, "question" to update.intervention?.question?.text)
                     }
                     decoded = result
                     checkNotNull(result)
                     check(result.views.all { it.request != null }) { "Explicit requests were left empty in a test dialogue." }
-                    check(result.intervention != null) { "An unresolved test dialogue did not produce a question." }
+                    // Gemma may now decline to repeat its question, so any update after both spoke counts.
+                    check(asked) { "An unresolved test dialogue did not produce a question." }
                     if (example["id"].asString == "correction") {
                         check(result.views.first().request!!.evidence.contains(3)) { "The corrected request must cite the correction." }
                     }
@@ -73,9 +79,13 @@ class DeviceGateTest {
                         "graph" to graph, "updates" to updates)
                 }
             }
+            reports += mapOf("id" to "structure", "links" to reports.flatMap { report ->
+                ((report["graph"] as? Graph)?.links ?: emptyList()).map { it.kind.name } }.groupingBy { it }.eachCount(),
+                "commonGround" to reports.count { (it["graph"] as? Graph)?.latest(null, NodeKind.COMMON) != null },
+                "declined" to reports.sumOf { report -> (report["updates"] as? List<*>).orEmpty().count { (it as Map<*, *>)["turn"] != 1 && it["reason"] == null } })
             // Synthetic fixtures only. Live session content is never written to this report.
             File(context.getExternalFilesDir(null), "evaluation-report.json").writeText(Gson().toJson(reports))
-            assertEquals("Every case must report; inspect evaluation-report.json", cases.size(), reports.size)
+            assertEquals("Every case must report; inspect evaluation-report.json", cases.size() + 1, reports.size)
             assertTrue("One or more real model outputs failed. See evaluation-report.json", reports.none { it.containsKey("error") })
         } finally { runtime.close() }
     }

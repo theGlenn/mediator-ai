@@ -6,9 +6,11 @@ import com.google.gson.JsonParser
 
 /**
  * Wire format for one incremental map update. Gemma sees the active graph and the unmapped turns, and
- * returns only additions: for each speaker with new turns a request and concern slot (empty when absent)
- * plus an optional link from that request to an existing node, an optional common ground, and whether to
- * intervene. Fixed slots keep E2B filling explicit requests, which an open claim list did not. Every
+ * returns only additions: for each speaker with new turns a request and concern slot (empty when absent),
+ * an optional common ground, and whether to intervene. Two relations are required decisions rather than
+ * optional links, which E2B mostly skipped: `revises` (0 or the speaker's own earlier request it replaces)
+ * and `vs` (how the request relates to the other speaker's current request). Fixed slots keep E2B filling
+ * explicit requests, which an open claim list did not. Every
  * generated token costs a full constrained decode step on the phone, so citations the app can infer are
  * omitted: claims cite their speaker's only new turn unless they have several, and shared claims cite each
  * speaker's anchor claim.
@@ -22,9 +24,8 @@ internal object AnalysisCodec {
     fun schemaFor(graph: Graph, turns: List<Turn>): String {
         val fresh = pending(graph, turns)
         val both = turns.map { it.speaker }.toSet().size == 2
-        val targets = graph.active.filter { it.owner != null }.map { it.id }
         val owned = Speaker.entries.joinToString(",") { speaker ->
-            """"${speaker.name}":${ownedSchema(fresh.filter { it.speaker == speaker }.map { it.id }, targets)}"""
+            """"${speaker.name}":${ownedSchema(fresh.filter { it.speaker == speaker }.map { it.id }, graph, speaker)}"""
         }
         val intervene = if (!both) NONE else """{"anyOf":[$NONE,{"type":"object","additionalProperties":false,"properties":{
             "why":{"type":"string","enum":[${reasons.joinToString(",") { "\"$it\"" }}]},"question":$TEXT,"proposal":$TEXT},
@@ -34,15 +35,22 @@ internal object AnalysisCodec {
           $owned,"common":${if (both) TEXT else EMPTY},"intervene":$intervene},"required":["A","B","common","intervene"]}"""
     }
 
-    private fun ownedSchema(ids: List<Int>, targets: List<Int>): String {
+    private fun ownedSchema(ids: List<Int>, graph: Graph, speaker: Speaker): String {
         if (ids.isEmpty()) return """{"type":"object","additionalProperties":false,"properties":{},"required":[]}"""
         val evidence = if (ids.size > 1) ""","e":{"type":"integer","enum":[${ids.joinToString(",")}]}""" else ""
-        val link = if (targets.isEmpty()) "" else ""","link":{"type":"object","additionalProperties":false,"properties":{
-            "rel":{"type":"string","enum":["replaces","conflicts","supports"]},"to":{"type":"integer","enum":[${targets.joinToString(",")}]}},
-            "required":["rel","to"]}"""
-        val required = if (ids.size > 1) """["request","concern","e"]""" else """["request","concern"]"""
-        return """{"type":"object","additionalProperties":false,"properties":{"request":$TEXT,"concern":$TEXT$evidence$link},"required":$required}"""
+        val own = ownRequests(graph, speaker)
+        val revises = if (own.isEmpty()) "" else ""","revises":{"type":"integer","enum":[0,${own.joinToString(",")}]}"""
+        val vs = if (opposite(graph, speaker) == null) "" else ""","vs":{"type":"string","enum":["conflicts","supports","unrelated"]}"""
+        val required = listOf("request", "concern") + listOfNotNull("e".takeIf { ids.size > 1 },
+            "revises".takeIf { own.isNotEmpty() }, "vs".takeIf { opposite(graph, speaker) != null })
+        return """{"type":"object","additionalProperties":false,"properties":{"request":$TEXT,"concern":$TEXT$evidence$revises$vs},
+            "required":[${required.joinToString(",") { "\"$it\"" }}]}"""
     }
+
+    private fun ownRequests(graph: Graph, speaker: Speaker) = graph.active.filter { it.owner == speaker && it.kind == NodeKind.REQUEST }.map { it.id }
+
+    /** The other speaker's current request, which `vs` compares against. */
+    private fun opposite(graph: Graph, speaker: Speaker) = graph.latest(Speaker.entries.first { it != speaker }, NodeKind.REQUEST)
 
     fun decode(raw: String, graph: Graph, turns: List<Turn>): GraphUpdate = try {
         val fresh = pending(graph, turns)
@@ -81,31 +89,30 @@ internal object AnalysisCodec {
         return this
     }
 
-    /** A speaker's request and concern slots; the link belongs to the request, or to the concern without one. */
+    /** A speaker's request and concern slots. `revises` and `vs` describe the request; without one they are ignored. */
     private fun owned(obj: JsonObject, graph: Graph, speaker: Speaker, ids: List<Int>): List<NewNode> {
         if (ids.isEmpty()) return emptyList<NewNode>().also { obj.exact() }
-        require(obj.keySet().containsAll(listOf("request", "concern")) && obj.keySet().all { it in setOf("request", "concern", "e", "link") })
-        require(("e" in obj.keySet()) == (ids.size > 1))
+        val own = ownRequests(graph, speaker)
+        val opposite = opposite(graph, speaker)
+        obj.exact(*listOfNotNull("request", "concern", "e".takeIf { ids.size > 1 }, "revises".takeIf { own.isNotEmpty() },
+            "vs".takeIf { opposite != null }).toTypedArray())
         val turn = if (ids.size == 1) ids.single() else obj["e"].asInt.also { require(it in ids) }
-        val claims = listOf(NodeKind.REQUEST to label(obj["request"]), NodeKind.CONCERN to label(obj["concern"]))
-            .mapNotNull { (kind, text) -> text?.let { kind to it } }
-            .filterNot { (kind, text) -> graph.active.any { it.owner == speaker && it.kind == kind && it.claim.text.equals(text, ignoreCase = true) } }
-        return claims.mapIndexed { index, (kind, text) ->
-            NewNode(kind, speaker, Claim(text, listOf(turn)), obj["link"]?.takeIf { index == 0 }?.let { link(it.asJsonObject, graph, speaker, kind) })
+        val revises = obj["revises"]?.asInt?.takeIf { it != 0 }?.also { require(it in own) }
+        val relation = when (obj["vs"]?.asString) {
+            null, "unrelated" -> null
+            "conflicts" -> LinkKind.CONFLICTS
+            "supports" -> LinkKind.SUPPORTS
+            else -> error("vs")
         }
+        val request = label(obj["request"])?.takeUnless { duplicate(graph, speaker, NodeKind.REQUEST, it) }
+        val concern = label(obj["concern"])?.takeUnless { duplicate(graph, speaker, NodeKind.CONCERN, it) }
+        val links = listOfNotNull(revises?.let { LinkKind.REPLACES to it }, relation?.let { it to requireNotNull(opposite).id })
+        return listOfNotNull(request?.let { NewNode(NodeKind.REQUEST, speaker, Claim(it, listOf(turn)), links) },
+            concern?.let { NewNode(NodeKind.CONCERN, speaker, Claim(it, listOf(turn))) })
     }
 
-    /** Links are structure, not claims: an implausible one is dropped rather than failing the update. */
-    private fun link(obj: JsonObject, graph: Graph, speaker: Speaker, kind: NodeKind): Pair<LinkKind, Int>? {
-        obj.exact("rel", "to")
-        val target = graph.active.find { it.id == obj["to"].asInt } ?: return null
-        return when (obj["rel"].asString) {
-            "replaces" -> (LinkKind.REPLACES to target.id).takeIf { target.owner == speaker && target.kind == kind }
-            "conflicts" -> (LinkKind.CONFLICTS to target.id).takeIf { target.owner != null && target.owner != speaker }
-            "supports" -> (LinkKind.SUPPORTS to target.id).takeIf { target.owner != null && target.owner != speaker }
-            else -> error("rel")
-        }
-    }
+    private fun duplicate(graph: Graph, speaker: Speaker, kind: NodeKind, text: String) =
+        graph.active.any { it.owner == speaker && it.kind == kind && it.claim.text.equals(text, ignoreCase = true) }
 
     /** Null for absent or placeholder labels, which are never displayed as interpretations. */
     private fun label(value: JsonElement): String? {
