@@ -37,8 +37,8 @@ internal object GemmaAnalysis {
         val (a, b) = AnalysisCodec.commonCandidate(graph, update) ?: return update
         val message = "COMMON GROUND: ${context.names.getValue(Speaker.A)} wants \"${a.claim.text}\"; " +
             "${context.names.getValue(Speaker.B)} wants \"${b.claim.text}\". From what they said, name a goal BOTH say they want, " +
-            "as a short phrase starting with a verb, like \"Keep the trip affordable\". A shared topic such as \"Dinner plans\" or " +
-            "\"The budget\" is not common ground. Leave common empty if they only share a topic or want opposite things."
+            "as a short phrase starting with a verb, like \"Keep the trip affordable\". Words like too, also or both often mark one. " +
+            "Leave common empty if they only share a topic or want opposite things."
         val raw = runCatching { active.sendMessage(message, responseFormat = ResponseFormat.json(AnalysisCodec.COMMON_SCHEMA)).toString() }
             .getOrNull() ?: return update
         observe(raw)
