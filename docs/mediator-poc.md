@@ -116,6 +116,19 @@ Phone result ([gate report](mediator-graph/device-gate.json)): all eleven dialog
 
 The structure Gemma adds is still sparse. Across the eleven final graphs there are 4 `conflicts` links, 1 `replaces`, no `supports`, and no common ground in this run; the 13 `explains` links are inferred by the app. In the demo, A's "One reliable update" did not mark the earlier "Regular update" as replaced, so both stay active, and B's first request label reads as a concern. After both had spoken, Gemma chose `impasse` 13 times and `next_step` once. Proposals sometimes still contain a speaker letter ("A suggest a few alternative times"). These are the next quality targets, together with the human review.
 
+### Map quality follow-up
+
+The optional link was the weak point: constrained decoding mostly closed the object instead of adding it. Each request now carries two **required** decisions: `revises` (0 or one of that speaker's own request ids) and `vs` (`conflicts`, `supports` or `unrelated` with the other person's current request). The prompt now also contains:
+- the people's names, so proposals stop saying "A suggest…";
+- a rule against pronouns, because Gemma inferred one from a name;
+- the latest suggested question, which Gemma may decline to repeat (the first update after both have spoken must still ask, which the schema enforces);
+- a positive common-ground example;
+- rules to ask both people and never rank their needs.
+
+On the host check (same model, desktop CPU), model-emitted links rose from 6 to 13: conflicts 2 → 7, supports 3 → 4, replaces 1 → 2. The demo now marks "One reliable update" as replacing the earlier request, and all 11 dialogues still pass. Common ground remained rare (0 of 11). After the both-people rule, most questions address both people; one still ranks their needs ("What is the priority between budget and equipment longevity?"). A phone rerun of these changes is pending.
+
+An extra small model is not the fix for these failures. A classifier or embedding sees short labels without the conversation, while Gemma already has both and simply skipped optional fields. An embedding model would help later: picking the relevant nodes when long always-on sessions outgrow the prompt, merging near-duplicate claims, and detecting topic changes. Xybrid Kotlin already ships ONNX Runtime with `MeanPool`/`Normalize` steps, so a ~23 MB sentence encoder could run through the SDK. Speaker attribution would need a speaker-embedding model, a separate choice for the voice-detection stage.
+
 ## Sources
 
 - [LiteRT-LM Kotlin API, pinned v0.18.0](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/docs/api/kotlin/getting_started.md)
