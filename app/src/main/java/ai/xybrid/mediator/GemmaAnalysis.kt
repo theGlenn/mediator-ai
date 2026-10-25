@@ -36,9 +36,9 @@ internal object GemmaAnalysis {
         observe: (String) -> Unit = {}): GraphUpdate {
         val (a, b) = AnalysisCodec.commonCandidate(graph, update) ?: return update
         val message = "COMMON GROUND: ${context.names.getValue(Speaker.A)} wants \"${a.claim.text}\"; " +
-            "${context.names.getValue(Speaker.B)} wants \"${b.claim.text}\". From what they said, name a goal BOTH say they want, " +
-            "as a short phrase starting with a verb, like \"Keep the trip affordable\". Words like too, also or both often mark one. " +
-            "Leave common empty if they only share a topic or want opposite things."
+            "${context.names.getValue(Speaker.B)} wants \"${b.claim.text}\". Do their own words show a goal they BOTH want? " +
+            "Answer shared yes only when both say they want the same result; words like too or also often mark it. " +
+            "Wanting different things about the same topic is no. If yes, name that goal briefly in common."
         val raw = runCatching { active.sendMessage(message, responseFormat = ResponseFormat.json(AnalysisCodec.COMMON_SCHEMA)).toString() }
             .getOrNull() ?: return update
         observe(raw)
@@ -91,9 +91,9 @@ Example: MAP is empty. NEW turn 1 A says "Please keep the hallway clear; I need 
 Output: {"A":{"request":"Clear hallway","concern":"Wheelchair access"},"B":{},"intervene":{"why":"none"}}
 Next, MAP has 1 A request: Clear hallway and 2 A concern: Wheelchair access. NEW turn 2 B says "I need safe bike storage and want us both able to pass."
 Output: {"A":{},"B":{"request":"Safe bike storage","concern":"","vs":"conflicts"},"intervene":{"why":"common_ground","question":"Could the bike be stored outside the hallway?","proposal":"Try bike storage outside the hallway"}}
-Then for COMMON GROUND between Clear hallway and Safe bike storage, both want to pass: {"common":"Accessible hallway"}.
+Then for COMMON GROUND between Clear hallway and Safe bike storage, both want to pass: {"shared":"yes","common":"Accessible hallway"}.
 Example WITHOUT stated reasons or shared goals: MAP has 1 A request: Window open. NEW turn 2 B says "I want the window closed."
 Output: {"A":{},"B":{"request":"Window closed","concern":"","vs":"conflicts"},"intervene":{"why":"impasse","question":"What matters to each of you about having the window open or closed?","proposal":"Compare the reasons behind your preferences"}}
-Then for COMMON GROUND between Window open and Window closed: {"common":""}.
+Then for COMMON GROUND between Window open and Window closed: {"shared":"no"}.
 Map the actual supplied conversation; never copy example content."""
 }

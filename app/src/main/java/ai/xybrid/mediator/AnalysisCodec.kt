@@ -100,7 +100,10 @@ internal object AnalysisCodec {
 
     /** Adds the follow-up's common ground to [update]. Common ground is optional, so a bad answer adds nothing. */
     fun withCommon(raw: String, graph: Graph, update: GraphUpdate): GraphUpdate {
-        val text = runCatching { label(JsonParser.parseString(raw).asJsonObject.exact("common")["common"]) }.getOrNull() ?: return update
+        val text = runCatching {
+            val answer = JsonParser.parseString(raw).asJsonObject
+            if (answer["shared"].asString == "yes") label(answer.exact("shared", "common")["common"]) else null.also { answer.exact("shared") }
+        }.getOrNull() ?: return update
         val trial = graph.apply(update)
         if (trial.latest(null, NodeKind.COMMON)?.claim?.text.equals(text, ignoreCase = true)) return update
         val evidence = Speaker.entries.map { trial.anchor(it)?.claim?.evidence?.first() ?: return update }
@@ -148,7 +151,10 @@ internal object AnalysisCodec {
 
     // Labels exclude quotes, braces and backslashes so wire syntax cannot leak into displayed text.
     private const val TEXT = """{"type":"string","pattern":"^[^\"{}\\\\]{0,180}${'$'}"}"""
-    val COMMON_SCHEMA = """{"type":"object","additionalProperties":false,"x-guidance":{"whitespace_flexible":false},
-        "properties":{"common":$TEXT},"required":["common"]}"""
+    // Deciding before naming keeps E2B from turning a shared topic into a goal while it writes the label.
+    val COMMON_SCHEMA = """{"x-guidance":{"whitespace_flexible":false},"anyOf":[
+        {"type":"object","additionalProperties":false,"properties":{"shared":{"type":"string","const":"no"}},"required":["shared"]},
+        {"type":"object","additionalProperties":false,"properties":{"shared":{"type":"string","const":"yes"},"common":$TEXT},
+        "required":["shared","common"]}]}"""
     private const val NONE = """{"type":"object","additionalProperties":false,"properties":{"why":{"type":"string","const":"none"}},"required":["why"]}"""
 }

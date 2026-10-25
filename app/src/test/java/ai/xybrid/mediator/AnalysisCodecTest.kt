@@ -67,7 +67,7 @@ class AnalysisCodecTest {
         val update = AnalysisCodec.decode(secondRaw, first, turns)
         assertEquals(listOf(1, 3), AnalysisCodec.commonCandidate(first, update)!!.toList().map { it.id })
         assertNull(AnalysisCodec.commonCandidate(Graph(), AnalysisCodec.decode(firstRaw, Graph(), turns.take(1))))
-        val shared = AnalysisCodec.withCommon("""{"common":"Deliver on time"}""", first, update)
+        val shared = AnalysisCodec.withCommon("""{"shared":"yes","common":"Deliver on time"}""", first, update)
         assertEquals(Claim("Deliver on time", listOf(1, 2)), shared.nodes.last().claim)
         val withCommon = first.apply(shared)
         val unrelated = AnalysisCodec.decode(thirdRaw.replace("supports", "unrelated"), withCommon, three)
@@ -77,9 +77,10 @@ class AnalysisCodecTest {
 
     @Test fun emptyRepeatedOrMalformedCommonGroundAddsNothing() {
         val update = AnalysisCodec.decode(secondRaw, first, turns)
-        val withCommon = first.apply(AnalysisCodec.withCommon("""{"common":"Delivery"}""", first, update))
+        val withCommon = first.apply(AnalysisCodec.withCommon("""{"shared":"yes","common":"Delivery"}""", first, update))
         val next = AnalysisCodec.decode(thirdRaw, withCommon, three)
-        listOf("""{"common":""}""", """{"common":"delivery"}""", "{", """{"common":"N/A","extra":1}""").forEach { raw ->
+        listOf("""{"shared":"no"}""", """{"shared":"yes","common":"delivery"}""", "{", """{"shared":"yes","common":"N/A"}""",
+            """{"shared":"no","common":"Delivery"}""").forEach { raw ->
             assertEquals(next, AnalysisCodec.withCommon(raw, withCommon, next))
         }
     }
