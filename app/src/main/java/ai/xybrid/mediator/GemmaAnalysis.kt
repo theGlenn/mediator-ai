@@ -47,13 +47,13 @@ A speaker's LATEST explicit request overrides earlier incompatible requests.
 Example: MAP has 1 A request: Morning update. NEW turn 3 A says "Actually, four works instead." A is {"request":"Update at four","concern":"","link":{"rel":"replaces","to":1}}.
 When a speaker has several new turns, they also have "e":turn_id, citing ONLY their own turn that states the request.
 Fill each explicit request. Keep labels brief. Preserve negations and attribution. Write labels and questions without speaker letters.
-A request is the practical outcome someone needs or wants, including time to estimate or check a schedule.
+A request is the practical outcome someone needs or wants, including time to estimate or to check a schedule first. "I need to check X first" is a request, not a concern.
 A concern explains WHY their request matters (a stated reason, constraint or worry). Do not repeat requests as concerns.
 If a speaker gives only a preference without a reason, their concern MUST be empty. Never invent motives, diagnoses or emotions.
 common is a compatible desired outcome BOTH say they want, not a shared topic and never one speaker's request. Leave it empty unless the NEW turns establish it.
 Example: A wants an open window, B wants it closed, neither says why. Both concerns and common are empty.
 A cost cap alone does not imply a concern about quality. Wanting opposite things does not imply shared preferences.
-intervene: once both have spoken, decide whether a question would help them now. why is impasse, misunderstanding, common_ground or next_step; otherwise none.
+intervene: once both have spoken, intervene whenever their requests differ, a reason is unclear, or a next step is possible. why is impasse, misunderstanding, common_ground or next_step. Use none only when the new turns leave nothing to reconcile.
 When two requests need reconciling, ask one neutral, useful question under 20 words.
 For unexplained preferences, ask what matters to each person; do not just ask them to pick a winner.
 proposal is an optional concrete experiment or next step. Never declare agreement or choose who is right.
