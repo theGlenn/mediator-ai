@@ -8,8 +8,8 @@ Source and commands: [the app README](../README.md).
 
 - Gemma 4 E2B through LiteRT-LM 0.18.0, GPU first with CPU fallback; Whisper Tiny English through published Xybrid Kotlin 0.13.1. No SDK source changes or ADK adapter.
 - USB provisioning with frozen Hugging Face revisions, exact sizes and SHA-256; checks run on the host and phone. The APK contains neither network permission nor a model downloader.
-- Two names, 30-second recording turns with cumulative live transcript, deterministic map, evidence quotes, transcript corrections, typed-entry recovery, a bounded JSON analysis call, and dual confirmation.
-- Eight-turn cap, stale-result rejection, recording cancellation on backgrounding, session reset, one pending intervention, and a 60-second chime cooldown.
+- Two names, 30-second recording turns with cumulative live transcript, an incrementally built conversation map, evidence quotes, transcript corrections, typed-entry recovery, a bounded JSON analysis call, and dual confirmation.
+- 40-turn cap (eight before the incremental map), stale-result rejection, recording cancellation on backgrounding, session reset, one pending intervention, and a 60-second chime cooldown.
 - Unit tests, packaged-manifest check, ten synthetic evaluation dialogues, a real-model desktop probe, and a real-runtime Android instrumentation gate.
 - Tabletop follow-up: opposing participant panels with the upper half rotated 180°, a central suggestion orb, and one confirmation control per participant. The original graph, transcript, corrections, manual entry and device checks are available in **Debug**. Suggestions remain optional, with the existing chime/cooldown policy and no speech output.
 - Bounded live timing diagnostics: first nonblank partial, capture duration, ASR finalization, Gemma analysis and audio end to map application. Debug shows up to 20 completed analyses; `MediatorPerf` logcat entries contain only counts/timings. No transcript or audio persistence was added.
@@ -20,13 +20,14 @@ Source and commands: [the app README](../README.md).
 | Check | Evidence / status |
 |---|---|
 | Android APK build | `:app:assembleDebug` succeeds with both native runtimes packaged; no duplicate native library conflict. |
-| Unit tests | **31 host tests pass:** session, codec (including the compact wire format), cancellation and timing checks. |
+| Unit tests | **33 host tests pass:** session, graph, codec (incremental map updates), cancellation and timing checks. |
 | Android lint | `:app:lintDebug` passes; version/target-ABI notices are not device results. |
 | Offline APK manifest | Packaged permission inspection confirms microphone permission and no `INTERNET` or `ACCESS_NETWORK_STATE`. |
 | Model provisioning | Both pinned weight downloads verified on the VM and Mac, then staged over USB. Gemma on Mac: `<mac build dir>/mediator-android/models/gemma-4-E2B-it.litertlm`. |
 | Real Gemma quality | **10/10 automatic checks pass** with real Gemma on VM CPU: requests, question, source ownership, one-speaker suppression, corrected request evidence and absent unknown concerns. [Full synthetic report](mediator-host-evaluation.json). Human semantic/usefulness review remains open. |
 | Mac build / USB install | **Passed** on Apple Silicon with Corretto 21.0.13 and Android SDK 36. `assembleDebug`, 21 unit tests, lint and instrumentation APK build passed in 6m31s on the first build. Offline manifest verified; APK installed and launched on CPH2655, Android 16 / API 36. |
 | OnePlus native runtime gate | **Passed:** Whisper warm-up and all ten real Gemma automatic cases in the same Android process. Final retained run: 1 instrumentation test / 0 failures (129.024 s total), **Gemma GPU**. [Synthetic device report](mediator-device-evaluation.json). App and models remain installed; live microphone use remains untested. |
+| Incremental map gate | **11/11 dialogues pass on the OnePlus and the host**, replayed one turn at a time (25 updates). Phone updates take 2.2–2.7 s before both people have spoken and 4.0–5.4 s (median 4.7 s) afterwards ([gate report](mediator-graph/device-gate.json)). See [Incremental conversation map](#incremental-conversation-map). |
 | Phone analysis latency | **4.02–6.46 s**, median **4.91 s**, across ten synthetic dialogues on Gemma GPU after the latency follow-up; **10/10 automatic checks pass** and 6/10 are within five seconds ([gate report](mediator-latency/device-gate.json)). Original POC: 9.14–12.37 s, median 10.76 s. Live audio-end-to-card and rehearsal latency remain unmeasured. |
 | Human quality review | **Pending.** Review all ten synthetic dialogues; require at least 8 useful questions and correct attribution throughout. |
 | Live demo rehearsals | **Pending.** Three consecutive four-turn sessions in airplane mode, with results within ten seconds of finalized input. |
@@ -99,6 +100,21 @@ Result through the production path ([gate report](mediator-latency/device-gate.j
 Quality notes for the human review: the corrected request cites turn 3, unknown concerns stay empty, and no shared topic is labelled as common ground. Some questions still ask which need matters more ("What is the priority between…"), and one proposal leaked a speaker letter ("A: Propose a few alternative times"). The host check of the same prompt passes 10/10.
 
 Sources: [Xybrid v0.13.1 streaming window selection](https://github.com/xybrid-ai/xybrid/blob/v0.13.1/crates/xybrid-core/src/streaming/session.rs#L539), [Whisper context guidance](https://github.com/xybrid-ai/xybrid/blob/v0.13.1/crates/xybrid-whisper/src/params.rs), [LiteRT-LM 0.18.0 constrained decoder](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/runtime/components/constrained_decoding/constrained_decoder.cc), [LiteRT-LM 0.18.0 benchmark metrics](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/kotlin/java/com/google/ai/edge/litertlm/Conversation.kt#L674), [Gemma 4 E2B model card benchmarks](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm).
+
+## Incremental conversation map
+
+Until this change every analysis re-read the whole transcript (at most eight turns) and replaced the map with a new snapshot. Now Gemma extends the map:
+
+1. The input is the active map (one line per node: id, speaker, kind, label, links), the last two mapped turns for context, and only the unmapped turns. Prefill stays at about 1,000–1,100 tokens instead of growing with the transcript, so sessions allow 40 turns.
+2. The output is additions only. For each speaker with new turns there is a request slot and a concern slot, plus an optional link from the request to an existing node: `replaces` (their own earlier request), `conflicts` or `supports` (the other speaker's claim). There is also an optional common ground and `intervene`, which is `none` or a reason (`impasse`, `misunderstanding`, `common_ground`, `next_step`) with a question and an optional next step. The schema allows only `none` until both have spoken.
+3. The app validates each addition against the map and transcript, then applies it. Gemma never assigns node IDs. A concern explains its speaker's latest request. Common ground rests on each speaker's latest claim and replaces the previous one. Replaced nodes stay as history. Implausible links are dropped, while invalid claims fail the update as before.
+4. Correcting a turn discards the nodes it produced, restores what they had replaced, and maps that turn again.
+
+An open list of claims (`[{"k":"request","t":…}]`) let E2B drop B's explicit request on the host check, so each speaker uses fixed request/concern slots. Two prompt rules were tightened during the phone runs. "I need to check my schedule first" is now a request with an example; the concern definition's "constraint" had pulled it into the concern slot. Gemma also intervenes whenever requests differ, because one run returned `none` for an obvious conflict.
+
+Phone result ([gate report](mediator-graph/device-gate.json)): all eleven dialogues, including the four-turn demo, pass the request, question, correction-citation and unknown-concern checks. First-turn updates decode 27–33 tokens in 2.2–2.7 s; later updates decode 53–70 tokens in 4.0–5.4 s.
+
+The structure Gemma adds is still sparse. Across the eleven final graphs there are 4 `conflicts` links, 1 `replaces`, no `supports`, and no common ground in this run; the 13 `explains` links are inferred by the app. In the demo, A's "One reliable update" did not mark the earlier "Regular update" as replaced, so both stay active, and B's first request label reads as a concern. After both had spoken, Gemma chose `impasse` 13 times and `next_step` once. Proposals sometimes still contain a speaker letter ("A suggest a few alternative times"). These are the next quality targets, together with the human review.
 
 ## Sources
 
