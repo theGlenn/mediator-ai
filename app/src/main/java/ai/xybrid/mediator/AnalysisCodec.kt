@@ -21,15 +21,17 @@ internal object AnalysisCodec {
     /** Turns the next update must map, oldest first. */
     fun pending(graph: Graph, turns: List<Turn>) = turns.filter { it.id !in graph.mapped }
 
-    fun schemaFor(graph: Graph, turns: List<Turn>): String {
+    /** [mustAsk]: no question has been suggested yet, so the first update after both speak has to offer one. */
+    fun schemaFor(graph: Graph, turns: List<Turn>, mustAsk: Boolean = false): String {
         val fresh = pending(graph, turns)
         val both = turns.map { it.speaker }.toSet().size == 2
         val owned = Speaker.entries.joinToString(",") { speaker ->
             """"${speaker.name}":${ownedSchema(fresh.filter { it.speaker == speaker }.map { it.id }, graph, speaker)}"""
         }
-        val intervene = if (!both) NONE else """{"anyOf":[$NONE,{"type":"object","additionalProperties":false,"properties":{
+        val ask = """{"type":"object","additionalProperties":false,"properties":{
             "why":{"type":"string","enum":[${reasons.joinToString(",") { "\"$it\"" }}]},"question":$TEXT,"proposal":$TEXT},
-            "required":["why","question","proposal"]}]}"""
+            "required":["why","question","proposal"]}"""
+        val intervene = when { !both -> NONE; mustAsk -> ask; else -> """{"anyOf":[$NONE,$ask]}""" }
         // llguidance otherwise permits newlines between keys, and each one costs a decode step.
         return """{"type":"object","additionalProperties":false,"x-guidance":{"whitespace_flexible":false},"properties":{
           $owned,"common":${if (both) TEXT else EMPTY},"intervene":$intervene},"required":["A","B","common","intervene"]}"""

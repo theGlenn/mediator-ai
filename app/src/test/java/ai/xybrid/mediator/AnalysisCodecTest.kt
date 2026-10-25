@@ -81,5 +81,8 @@ class AnalysisCodecTest {
         val third = JsonParser.parseString(AnalysisCodec.schemaFor(second, three)).asJsonObject["properties"].asJsonObject
         assertEquals("[0,1]", third["A"].asJsonObject["properties"].asJsonObject["revises"].asJsonObject["enum"].toString())
         assertEquals(2, later["intervene"].asJsonObject["anyOf"].asJsonArray.size())
+        val firstQuestion = JsonParser.parseString(AnalysisCodec.schemaFor(first, turns, mustAsk = true)).asJsonObject["properties"].asJsonObject
+        assertEquals(AnalysisCodec.reasons.toString().replace(" ", ""), firstQuestion["intervene"].asJsonObject["properties"].asJsonObject["why"]
+            .asJsonObject["enum"].asJsonArray.map { it.asString }.toString().replace(" ", ""))
     }
 }
