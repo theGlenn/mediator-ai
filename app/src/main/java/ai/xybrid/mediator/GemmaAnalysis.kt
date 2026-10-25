@@ -47,7 +47,7 @@ A speaker's LATEST explicit request overrides earlier incompatible requests.
 Example: MAP has 1 A request: Morning update. NEW turn 3 A says "Actually, four works instead." A is {"request":"Update at four","concern":"","link":{"rel":"replaces","to":1}}.
 When a speaker has several new turns, they also have "e":turn_id, citing ONLY their own turn that states the request.
 Fill each explicit request. Keep labels brief. Preserve negations and attribution. Write labels and questions without speaker letters.
-A request is the practical outcome someone needs or wants, including time to estimate or to check a schedule first. "I need to check X first" is a request, not a concern.
+A request is the practical outcome someone needs or wants, including time to estimate or to check a schedule first. Example: "Not sure, I need to check my calendar first" has request "Check calendar first" and an empty concern.
 A concern explains WHY their request matters (a stated reason, constraint or worry). Do not repeat requests as concerns.
 If a speaker gives only a preference without a reason, their concern MUST be empty. Never invent motives, diagnoses or emotions.
 common is a compatible desired outcome BOTH say they want, not a shared topic and never one speaker's request. Leave it empty unless the NEW turns establish it.
