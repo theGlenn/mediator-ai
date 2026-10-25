@@ -131,6 +131,21 @@ On the OnePlus ([gate report](mediator-graph/device-gate-quality.json)), all 11 
 
 An extra small model is not the fix for these failures. A classifier or embedding sees short labels without the conversation, while Gemma already has both and simply skipped optional fields. An embedding model would help later: picking the relevant nodes when long always-on sessions outgrow the prompt, merging near-duplicate claims, and detecting topic changes. Xybrid Kotlin already ships ONNX Runtime with `MeanPool`/`Normalize` steps, so a ~23 MB sentence encoder could run through the SDK. Speaker attribution would need a speaker-embedding model, a separate choice for the voice-detection stage.
 
+### Common-ground follow-up
+
+Inside the main update, Gemma left the optional `common` field empty in every final graph. Common ground is now a separate question asked in the **same** LiteRT-LM conversation, after the main update, whose prompt and turns are already prefilled. It runs after a new request while the map has no common ground, or when a new request supports the other person's. Its answer is decoded separately, and a failed or empty answer leaves the main update unchanged.
+
+On the OnePlus ([gate report](mediator-graph/device-gate-common.json)) the check costs **0.44–1.0 s** (median about 0.6 s). With it, updates after both have spoken take 4.8–6.3 s. Four wordings were tried, all passing or failing the same 11-dialogue gate:
+
+| Follow-up wording | Phone: dialogues with common ground | Wrong common ground | Gate |
+|---|---|---|---|
+| **Name briefly an outcome BOTH say they want; empty for a shared topic or opposite wants (kept)** | **7/11** ("Stay on schedule", "Timely delivery" in the demo, "A clear timeline") | "Weekend activity", "Update"; two compromises ("Affordable and durable equipment") | 11/11 |
+| + phrase it as a goal starting with a verb + topic examples | 2/11 | none, but the real ones were lost | 11/11 |
+| + verb phrase + "too/also" cue | 10/11 | topics turned into goals ("Spend the weekend", "Prefer a version") | fails unknown-concern |
+| shared yes/no decision before the label | 0/11 | none | 11/11 |
+
+The first wording is kept because it finds the demo's shared goal; its shared-topic false positives remain the main common-ground issue. A sturdier fix probably needs a precise definition of what each person said they want, for example the turn text quoted in the follow-up, or a human-labelled set of dialogues to tune against, rather than more prompt wording.
+
 ## Sources
 
 - [LiteRT-LM Kotlin API, pinned v0.18.0](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/docs/api/kotlin/getting_started.md)
