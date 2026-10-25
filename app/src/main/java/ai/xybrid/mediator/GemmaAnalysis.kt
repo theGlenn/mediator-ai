@@ -23,8 +23,26 @@ internal object GemmaAnalysis {
         prefillPrefaceOnInit = decoding.prefillPreface, enableSpeculativeDecoding = decoding.speculative)
 
     fun run(active: Conversation, graph: Graph, turns: List<Turn>, context: MapContext = MapContext(),
-        observe: (String) -> Unit = {}): GraphUpdate =
-        AnalysisCodec.decode(generate(active, graph, turns, context).also(observe), graph, turns)
+        observe: (String) -> Unit = {}): GraphUpdate {
+        val update = AnalysisCodec.decode(generate(active, graph, turns, context).also(observe), graph, turns)
+        return commonGround(active, graph, update, context, observe)
+    }
+
+    /**
+     * A focused follow-up in the same conversation, so the prompt and turns are already prefilled: names
+     * the outcome both people want, or nothing. A failed follow-up keeps [update] as it is.
+     */
+    fun commonGround(active: Conversation, graph: Graph, update: GraphUpdate, context: MapContext = MapContext(),
+        observe: (String) -> Unit = {}): GraphUpdate {
+        val (a, b) = AnalysisCodec.commonCandidate(graph, update) ?: return update
+        val message = "COMMON GROUND: ${context.names.getValue(Speaker.A)} wants \"${a.claim.text}\"; " +
+            "${context.names.getValue(Speaker.B)} wants \"${b.claim.text}\". From what they said, name briefly an outcome " +
+            "BOTH say they want. Leave common empty if they only share a topic or want opposite things."
+        val raw = runCatching { active.sendMessage(message, responseFormat = ResponseFormat.json(AnalysisCodec.COMMON_SCHEMA)).toString() }
+            .getOrNull() ?: return update
+        observe(raw)
+        return AnalysisCodec.withCommon(raw, graph, update)
+    }
 
     /** Raw model output. Callers must pass it through [AnalysisCodec.decode] before showing anything. */
     fun generate(active: Conversation, graph: Graph, turns: List<Turn>, context: MapContext = MapContext(),
@@ -57,8 +75,8 @@ Fill each explicit request. Keep labels brief. Preserve negations and attributio
 A request is the practical outcome someone needs or wants, including time to estimate or to check a schedule first. Example: "Not sure, I need to check my calendar first" has request "Check calendar first" and an empty concern.
 A concern explains WHY their request matters (a stated reason, constraint or worry). Do not repeat requests as concerns. A request says what they want, not what bothers them: "The noise keeps me awake" is a concern; its request is "Quiet at night".
 If a speaker gives only a preference without a reason, their concern MUST be empty. Never invent motives, diagnoses or emotions.
-common is a compatible desired outcome BOTH say they want, not a shared topic and never one speaker's request. Leave it empty unless the NEW turns establish it. Example: after A wants a cheap trip, B says "I also want it to stay affordable"; common is "Keep the trip affordable".
-Example: A wants an open window, B wants it closed, neither says why. Both concerns and common are empty.
+When asked for COMMON GROUND, common is a compatible desired outcome BOTH say they want, not a shared topic and never one speaker's request. Example: after A wants a cheap trip, B says "I also want it to stay affordable"; common is "Keep the trip affordable".
+Example: A wants an open window, B wants it closed, neither says why. Both concerns are empty, and so is common.
 A cost cap alone does not imply a concern about quality. Wanting opposite things does not imply shared preferences.
 intervene: once both have spoken, intervene when the NEW turns open a difference, leave a reason unclear, reveal common ground, or make a next step possible. why is impasse, misunderstanding, common_ground or next_step. Use none when the new turns change nothing to reconcile or your question would repeat the CURRENT QUESTION.
 When two requests need reconciling, ask one neutral, useful question under 20 words. Ask it of BOTH people, about how both requests could fit together; do not question one person alone.
@@ -69,10 +87,12 @@ Focus on the underlying practical need: in "declare I won; what I actually need 
 Questions should address the people as "you"; you are not a participant. Avoid already answered questions.
 Emit compact JSON, no whitespace, markdown or explanation. Finish within 256 tokens.
 Example: MAP is empty. NEW turn 1 A says "Please keep the hallway clear; I need wheelchair access."
-Output: {"A":{"request":"Clear hallway","concern":"Wheelchair access"},"B":{},"common":"","intervene":{"why":"none"}}
+Output: {"A":{"request":"Clear hallway","concern":"Wheelchair access"},"B":{},"intervene":{"why":"none"}}
 Next, MAP has 1 A request: Clear hallway and 2 A concern: Wheelchair access. NEW turn 2 B says "I need safe bike storage and want us both able to pass."
-Output: {"A":{},"B":{"request":"Safe bike storage","concern":"","vs":"conflicts"},"common":"Accessible hallway","intervene":{"why":"common_ground","question":"Could the bike be stored outside the hallway?","proposal":"Try bike storage outside the hallway"}}
+Output: {"A":{},"B":{"request":"Safe bike storage","concern":"","vs":"conflicts"},"intervene":{"why":"common_ground","question":"Could the bike be stored outside the hallway?","proposal":"Try bike storage outside the hallway"}}
+Then for COMMON GROUND between Clear hallway and Safe bike storage, both want to pass: {"common":"Accessible hallway"}.
 Example WITHOUT stated reasons or shared goals: MAP has 1 A request: Window open. NEW turn 2 B says "I want the window closed."
-Output: {"A":{},"B":{"request":"Window closed","concern":"","vs":"conflicts"},"common":"","intervene":{"why":"impasse","question":"What matters to each of you about having the window open or closed?","proposal":"Compare the reasons behind your preferences"}}
+Output: {"A":{},"B":{"request":"Window closed","concern":"","vs":"conflicts"},"intervene":{"why":"impasse","question":"What matters to each of you about having the window open or closed?","proposal":"Compare the reasons behind your preferences"}}
+Then for COMMON GROUND between Window open and Window closed: {"common":""}.
 Map the actual supplied conversation; never copy example content."""
 }

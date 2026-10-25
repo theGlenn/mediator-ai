@@ -43,11 +43,13 @@ internal data class GemmaMetrics(
     val timeToFirstTokenMillis: Long? = null,
     val prefillTokensPerSecond: Double? = null,
     val decodeTokensPerSecond: Double? = null,
+    /** The follow-up common-ground check in the same conversation; null when none was due. */
+    val commonMillis: Long? = null,
 ) {
     fun logMetadata() = "setupMs=$setupMillis generateMs=$generateMillis " +
         "prefillTokens=${prefillTokens ?: "na"} decodeTokens=${decodeTokens ?: "na"} " +
         "ttftMs=${timeToFirstTokenMillis ?: "na"} prefillTps=${prefillTokensPerSecond.rate()} " +
-        "decodeTps=${decodeTokensPerSecond.rate()}"
+        "decodeTps=${decodeTokensPerSecond.rate()} commonMs=${commonMillis ?: "na"}"
 
     private fun Double?.rate() = this?.let { String.format(java.util.Locale.ROOT, "%.1f", it) } ?: "na"
 }

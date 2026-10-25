@@ -114,15 +114,31 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
         }
     }
 
-    /** Maps the turns [graph] does not yet cover. */
-    suspend fun analyze(graph: Graph, turns: List<Turn>, context: MapContext = MapContext()): TimedUpdate {
-        val generated = generate(graph, turns, context = context)
-        return TimedUpdate(AnalysisCodec.decode(generated.raw, graph, turns), generated.gemma)
+    /** Maps the turns [graph] does not yet cover, then checks for common ground in the same conversation. */
+    suspend fun analyze(graph: Graph, turns: List<Turn>, context: MapContext = MapContext()): TimedUpdate =
+        session(graph, turns, decoding) { active, setup ->
+            val generateStart = SystemClock.elapsedRealtime()
+            val raw = GemmaAnalysis.generate(active, graph, turns, context, decoding.constrained)
+            val metrics = metrics(active, setup, SystemClock.elapsedRealtime() - generateStart)
+            val update = AnalysisCodec.decode(raw, graph, turns)
+            if (AnalysisCodec.commonCandidate(graph, update) == null) return@session TimedUpdate(update, metrics)
+            currentCoroutineContext().ensureActive()
+            val commonStart = SystemClock.elapsedRealtime()
+            val checked = GemmaAnalysis.commonGround(active, graph, update, context)
+            TimedUpdate(checked, metrics.copy(commonMillis = SystemClock.elapsedRealtime() - commonStart))
+        }
+
+    /** Unvalidated main output for device probes; never display it without decoding. */
+    suspend fun generate(graph: Graph, turns: List<Turn>, decoding: Decoding = this.decoding,
+        context: MapContext = MapContext()): Generation = session(graph, turns, decoding) { active, setup ->
+        val generateStart = SystemClock.elapsedRealtime()
+        val raw = GemmaAnalysis.generate(active, graph, turns, context, decoding.constrained)
+        Generation(raw, metrics(active, setup, SystemClock.elapsedRealtime() - generateStart))
     }
 
-    /** Unvalidated output for [analyze] and device probes; never display it without decoding. */
-    suspend fun generate(graph: Graph, turns: List<Turn>, decoding: Decoding = this.decoding,
-        context: MapContext = MapContext()): Generation = withContext(Dispatchers.IO) {
+    /** One analysis conversation: the prefetched one when the decoding matches, closed and replaced afterwards. */
+    private suspend fun <T> session(graph: Graph, turns: List<Turn>, decoding: Decoding,
+        block: suspend (com.google.ai.edge.litertlm.Conversation, Long) -> T): T = withContext(Dispatchers.IO) {
         mutex.withLock {
             currentCoroutineContext().ensureActive()
             require(AnalysisCodec.pending(graph, turns).isNotEmpty() && turns.size <= MAX_TURNS)
@@ -135,11 +151,9 @@ internal class LocalRuntime(private val context: Context, private val maxNumToke
             synchronized(generationLock) { generation = active }
             try {
                 currentCoroutineContext().ensureActive()
-                val generateStart = SystemClock.elapsedRealtime()
-                val raw = GemmaAnalysis.generate(active, graph, turns, context, decoding.constrained)
-                val metrics = metrics(active, generateStart - setupStart, SystemClock.elapsedRealtime() - generateStart)
+                val result = block(active, SystemClock.elapsedRealtime() - setupStart)
                 currentCoroutineContext().ensureActive()
-                Generation(raw, metrics)
+                result
             } finally {
                 synchronized(generationLock) { generation = null; active.close() }
                 if (decoding == this@LocalRuntime.decoding) background.launch { prepareNext() }

@@ -303,6 +303,7 @@ private fun DeviceDetails(state: ScreenState) {
                     gemma.timeToFirstTokenMillis?.let { append(" · first token ${it / 1000.0}s") }
                     gemma.decodeTokens?.let { append(" · $it output tokens") }
                     gemma.decodeTokensPerSecond?.let { append(" at %.1f tok/s".format(java.util.Locale.ROOT, it)) }
+                    gemma.commonMillis?.let { append(" · common-ground check ${it / 1000.0}s") }
                 }, style = MaterialTheme.typography.bodySmall) }
             }
             if (state.diagnostics.isNotEmpty()) {

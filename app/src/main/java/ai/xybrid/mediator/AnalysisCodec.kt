@@ -7,7 +7,8 @@ import com.google.gson.JsonParser
 /**
  * Wire format for one incremental map update. Gemma sees the active graph and the unmapped turns, and
  * returns only additions: for each speaker with new turns a request and concern slot (empty when absent),
- * an optional common ground, and whether to intervene. Two relations are required decisions rather than
+ * and whether to intervene. Common ground comes from a separate focused follow-up ([commonCandidate]),
+ * because E2B almost never filled an optional common field inside the main update. Two relations are required decisions rather than
  * optional links, which E2B mostly skipped: `revises` (0 or the speaker's own earlier request it replaces)
  * and `vs` (how the request relates to the other speaker's current request). Fixed slots keep E2B filling
  * explicit requests, which an open claim list did not. Every
@@ -34,7 +35,7 @@ internal object AnalysisCodec {
         val intervene = when { !both -> NONE; mustAsk -> ask; else -> """{"anyOf":[$NONE,$ask]}""" }
         // llguidance otherwise permits newlines between keys, and each one costs a decode step.
         return """{"type":"object","additionalProperties":false,"x-guidance":{"whitespace_flexible":false},"properties":{
-          $owned,"common":${if (both) TEXT else EMPTY},"intervene":$intervene},"required":["A","B","common","intervene"]}"""
+          $owned,"intervene":$intervene},"required":["A","B","intervene"]}"""
     }
 
     private fun ownedSchema(ids: List<Int>, graph: Graph, speaker: Speaker): String {
@@ -57,7 +58,7 @@ internal object AnalysisCodec {
     fun decode(raw: String, graph: Graph, turns: List<Turn>): GraphUpdate = try {
         val fresh = pending(graph, turns)
         require(fresh.isNotEmpty())
-        val root = JsonParser.parseString(raw).asJsonObject.exact("A", "B", "common", "intervene")
+        val root = JsonParser.parseString(raw).asJsonObject.exact("A", "B", "intervene")
         val owned = Speaker.entries.flatMap { speaker ->
             val ids = fresh.filter { it.speaker == speaker }.map { it.id }
             owned(root[speaker.name].asJsonObject, graph, speaker, ids)
@@ -67,9 +68,6 @@ internal object AnalysisCodec {
         val sources = Speaker.entries.map { speaker ->
             trial.anchor(speaker)?.claim?.evidence?.first() ?: turns.lastOrNull { it.speaker == speaker }?.id
         }
-        val common = label(root["common"])
-            ?.takeIf { text -> graph.latest(null, NodeKind.COMMON)?.claim?.text?.equals(text, ignoreCase = true) != true }
-            ?.let { NewNode(NodeKind.COMMON, null, Claim(it, sources.map { id -> requireNotNull(id) })) }
         val intervene = root["intervene"].asJsonObject
         val why = intervene["why"].asString
         val intervention = if (why == "none") null.also { intervene.exact("why") } else {
@@ -81,9 +79,32 @@ internal object AnalysisCodec {
             require(question != null || proposal == null)
             question?.let { Intervention(Claim(it, evidence), proposal?.let { text -> Claim(text, evidence) }) }
         }
-        GraphUpdate(owned + listOfNotNull(common), mapped, intervention, why.takeIf { intervention != null })
+        GraphUpdate(owned, mapped, intervention, why.takeIf { intervention != null })
     } catch (error: Exception) {
         throw IllegalArgumentException("The model response did not pass grounding checks. Retry or shorten the turn.", error)
+    }
+
+    /**
+     * The two current requests a common-ground follow-up compares: after a new request when the map has no
+     * common ground yet, or when a new request supports the other person's. Null when no check is due.
+     */
+    fun commonCandidate(graph: Graph, update: GraphUpdate): Pair<Node, Node>? {
+        val added = update.nodes.filter { it.kind == NodeKind.REQUEST }
+        if (added.isEmpty()) return null
+        val trial = graph.apply(update)
+        val a = trial.latest(Speaker.A, NodeKind.REQUEST) ?: return null
+        val b = trial.latest(Speaker.B, NodeKind.REQUEST) ?: return null
+        val compatible = added.any { node -> node.links.any { it.first == LinkKind.SUPPORTS } }
+        return (a to b).takeIf { trial.latest(null, NodeKind.COMMON) == null || compatible }
+    }
+
+    /** Adds the follow-up's common ground to [update]. Common ground is optional, so a bad answer adds nothing. */
+    fun withCommon(raw: String, graph: Graph, update: GraphUpdate): GraphUpdate {
+        val text = runCatching { label(JsonParser.parseString(raw).asJsonObject.exact("common")["common"]) }.getOrNull() ?: return update
+        val trial = graph.apply(update)
+        if (trial.latest(null, NodeKind.COMMON)?.claim?.text.equals(text, ignoreCase = true)) return update
+        val evidence = Speaker.entries.map { trial.anchor(it)?.claim?.evidence?.first() ?: return update }
+        return update.copy(nodes = update.nodes + NewNode(NodeKind.COMMON, null, Claim(text, evidence)))
     }
 
     private fun JsonObject.exact(vararg keys: String): JsonObject {
@@ -127,6 +148,7 @@ internal object AnalysisCodec {
 
     // Labels exclude quotes, braces and backslashes so wire syntax cannot leak into displayed text.
     private const val TEXT = """{"type":"string","pattern":"^[^\"{}\\\\]{0,180}${'$'}"}"""
-    private const val EMPTY = """{"type":"string","const":""}"""
+    val COMMON_SCHEMA = """{"type":"object","additionalProperties":false,"x-guidance":{"whitespace_flexible":false},
+        "properties":{"common":$TEXT},"required":["common"]}"""
     private const val NONE = """{"type":"object","additionalProperties":false,"properties":{"why":{"type":"string","const":"none"}},"required":["why"]}"""
 }

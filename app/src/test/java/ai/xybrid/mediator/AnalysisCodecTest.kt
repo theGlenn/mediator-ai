@@ -6,12 +6,12 @@ import org.junit.Test
 
 class AnalysisCodecTest {
     private val turns = listOf(Turn(1, Speaker.A, "I need updates to plan"), Turn(2, Speaker.B, "I need focus"))
-    private val firstRaw = """{"A":{"request":"Updates","concern":"Planning"},"B":{},"common":"","intervene":{"why":"none"}}"""
+    private val firstRaw = """{"A":{"request":"Updates","concern":"Planning"},"B":{},"intervene":{"why":"none"}}"""
     private val first = Graph().apply(AnalysisCodec.decode(firstRaw, Graph(), turns.take(1)))
-    private val secondRaw = """{"A":{},"B":{"request":"Focus","concern":"","vs":"conflicts"},"common":"","intervene":{"why":"impasse","question":"Would one daily update work?","proposal":"Try one daily update"}}"""
+    private val secondRaw = """{"A":{},"B":{"request":"Focus","concern":"","vs":"conflicts"},"intervene":{"why":"impasse","question":"Would one daily update work?","proposal":"Try one daily update"}}"""
     private val second = first.apply(AnalysisCodec.decode(secondRaw, first, turns))
     private val three = turns + Turn(3, Speaker.A, "Actually four works")
-    private val thirdRaw = """{"A":{"request":"Update at four","concern":"","revises":1,"vs":"supports"},"B":{},"common":"","intervene":{"why":"none"}}"""
+    private val thirdRaw = """{"A":{"request":"Update at four","concern":"","revises":1,"vs":"supports"},"B":{},"intervene":{"why":"none"}}"""
 
     @Test fun firstTurnAddsClaimsCitingItsOnlyTurnAndCannotIntervene() {
         val update = AnalysisCodec.decode(firstRaw, Graph(), turns.take(1))
@@ -51,17 +51,37 @@ class AnalysisCodecTest {
     }
 
     @Test fun severalNewTurnsFromOneSpeakerRequireTheirOwnCitation() {
-        val raw = """{"A":{"request":"Update at four","concern":"","e":3},"B":{"request":"Focus","concern":""},"common":"","intervene":{"why":"none"}}"""
+        val raw = """{"A":{"request":"Update at four","concern":"","e":3},"B":{"request":"Focus","concern":""},"intervene":{"why":"none"}}"""
         assertEquals(listOf(3), AnalysisCodec.decode(raw, Graph(), three).nodes.first().claim.evidence)
         listOf(raw.replace(",\"e\":3", ""), raw.replace("\"e\":3", "\"e\":2")).forEach { invalid ->
             assertThrows(IllegalArgumentException::class.java) { AnalysisCodec.decode(invalid, Graph(), three) }
         }
     }
 
-    @Test fun repeatedClaimsPlaceholdersAndRepeatedCommonGroundAddNothing() {
-        val withCommon = first.apply(AnalysisCodec.decode(secondRaw.replace("\"common\":\"\"", "\"common\":\"Delivery\""), first, turns))
-        val raw = """{"A":{"request":"updates","concern":"N/A","revises":0,"vs":"unrelated"},"B":{},"common":"Delivery","intervene":{"why":"none"}}"""
-        assertTrue(AnalysisCodec.decode(raw, withCommon, three).nodes.isEmpty())
+    @Test fun repeatedClaimsAndPlaceholdersAddNothing() {
+        val raw = """{"A":{"request":"updates","concern":"N/A","revises":0,"vs":"unrelated"},"B":{},"intervene":{"why":"none"}}"""
+        assertTrue(AnalysisCodec.decode(raw, second, three).nodes.isEmpty())
+    }
+
+    @Test fun commonGroundCheckIsDueForANewRequestUntilFoundThenOnlyForSupport() {
+        val update = AnalysisCodec.decode(secondRaw, first, turns)
+        assertEquals(listOf(1, 3), AnalysisCodec.commonCandidate(first, update)!!.toList().map { it.id })
+        assertNull(AnalysisCodec.commonCandidate(Graph(), AnalysisCodec.decode(firstRaw, Graph(), turns.take(1))))
+        val shared = AnalysisCodec.withCommon("""{"common":"Deliver on time"}""", first, update)
+        assertEquals(Claim("Deliver on time", listOf(1, 2)), shared.nodes.last().claim)
+        val withCommon = first.apply(shared)
+        val unrelated = AnalysisCodec.decode(thirdRaw.replace("supports", "unrelated"), withCommon, three)
+        assertNull(AnalysisCodec.commonCandidate(withCommon, unrelated))
+        assertNotNull(AnalysisCodec.commonCandidate(withCommon, AnalysisCodec.decode(thirdRaw, withCommon, three)))
+    }
+
+    @Test fun emptyRepeatedOrMalformedCommonGroundAddsNothing() {
+        val update = AnalysisCodec.decode(secondRaw, first, turns)
+        val withCommon = first.apply(AnalysisCodec.withCommon("""{"common":"Delivery"}""", first, update))
+        val next = AnalysisCodec.decode(thirdRaw, withCommon, three)
+        listOf("""{"common":""}""", """{"common":"delivery"}""", "{", """{"common":"N/A","extra":1}""").forEach { raw ->
+            assertEquals(next, AnalysisCodec.withCommon(raw, withCommon, next))
+        }
     }
 
     @Test fun rejectsMalformedTruncatedAndLeakedWireSyntax() {
@@ -72,7 +92,7 @@ class AnalysisCodecTest {
     @Test fun schemaOffersOnlyWhatTheNewTurnsAllow() {
         val opening = JsonParser.parseString(AnalysisCodec.schemaFor(Graph(), turns.take(1))).asJsonObject["properties"].asJsonObject
         assertEquals(0, opening["B"].asJsonObject["properties"].asJsonObject.size())
-        assertEquals("", opening["common"].asJsonObject["const"].asString)
+        assertFalse(opening.has("common"))
         assertEquals("none", opening["intervene"].asJsonObject["properties"].asJsonObject["why"].asJsonObject["const"].asString)
         val later = JsonParser.parseString(AnalysisCodec.schemaFor(first, turns)).asJsonObject["properties"].asJsonObject
         val item = later["B"].asJsonObject["properties"].asJsonObject
